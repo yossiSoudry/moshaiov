@@ -10,7 +10,6 @@ import {
   Heart,
   User,
   Menu,
-  Diamond,
 } from 'lucide-react';
 import { cn, debounce } from '@/lib/utils';
 import { useCartStore } from '@/store/cart-store';
@@ -68,47 +67,10 @@ export function Header() {
         className={cn(
           'fixed top-0 left-0 right-0 z-50 transition-all duration-700',
           isScrolled
-            ? 'bg-background/80 backdrop-blur-xl shadow-lg shadow-black/5'
+            ? 'bg-background/95 backdrop-blur-xl shadow-lg shadow-black/5'
             : 'bg-transparent'
         )}
       >
-        {/* Premium top bar */}
-        <div className={cn(
-          "hidden lg:block text-center py-2.5 text-sm transition-all duration-500 overflow-hidden",
-          isScrolled ? 'max-h-0 py-0 opacity-0' : 'max-h-20 opacity-100'
-        )}>
-          <div className="bg-primary text-primary-foreground relative">
-            {/* Animated gold accent line */}
-            <motion.div
-              className="absolute bottom-0 left-0 right-0 h-[1px]"
-              style={{
-                background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.5), transparent)',
-              }}
-              animate={{
-                backgroundPosition: ['0% 0%', '100% 0%'],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: 'linear',
-              }}
-            />
-            <div className="container mx-auto px-4 py-2.5">
-              <motion.p
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-center gap-3"
-              >
-                <Diamond className="h-3.5 w-3.5 text-gold-400" />
-                <span className="tracking-wide">משלוח חינם בהזמנות מעל ₪500</span>
-                <span className="text-gold-400 mx-2">|</span>
-                <span className="text-primary-foreground/80">רבי עקיבא 113, בני ברק</span>
-                <Diamond className="h-3.5 w-3.5 text-gold-400" />
-              </motion.p>
-            </div>
-          </div>
-        </div>
-
         {/* Main header */}
         <div className={cn(
           "transition-all duration-500",
@@ -120,7 +82,10 @@ export function Header() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="lg:hidden p-2.5 hover:bg-muted/80 rounded-xl transition-colors"
+                className={cn(
+                  "lg:hidden p-2.5 rounded-xl transition-colors",
+                  isScrolled ? "hover:bg-muted/80 text-foreground" : "hover:bg-white/10 text-white"
+                )}
                 onClick={() => setIsMobileMenuOpen(true)}
                 aria-label="פתח תפריט"
               >
@@ -177,20 +142,16 @@ export function Header() {
                 </motion.div>
                 <div className="hidden sm:block">
                   <motion.h1
-                    className="text-xl lg:text-2xl font-bold tracking-wider"
-                    style={{
-                      background: isScrolled
-                        ? 'linear-gradient(135deg, #0a0a0a, #363636)'
-                        : 'linear-gradient(135deg, #ffffff, #d4d4d4)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                    }}
+                    className={cn(
+                      "text-xl lg:text-2xl font-bold tracking-wider transition-colors duration-500",
+                      isScrolled ? "text-foreground" : "text-white"
+                    )}
                   >
                     MOSHAYOV
                   </motion.h1>
                   <p className={cn(
                     "text-[10px] lg:text-xs -mt-0.5 tracking-widest transition-colors duration-500",
-                    isScrolled ? "text-muted-foreground" : "text-primary-foreground/60"
+                    isScrolled ? "text-muted-foreground" : "text-white/70"
                   )}>
                     תכשיטי זהב ויהלומים
                   </p>
@@ -211,10 +172,10 @@ export function Header() {
                       className={cn(
                         'relative px-4 py-2 text-sm font-medium transition-all duration-300 rounded-lg group',
                         pathname === link.href
-                          ? isScrolled ? 'text-foreground' : 'text-primary-foreground'
+                          ? isScrolled ? 'text-foreground' : 'text-white'
                           : isScrolled
                             ? 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                            : 'text-primary-foreground/70 hover:text-primary-foreground hover:bg-white/5'
+                            : 'text-white/80 hover:text-white hover:bg-white/10'
                       )}
                     >
                       {link.label}
@@ -245,7 +206,7 @@ export function Header() {
                       "p-2.5 rounded-xl transition-all duration-300",
                       isScrolled
                         ? "hover:bg-muted/80 text-foreground"
-                        : "hover:bg-white/10 text-primary-foreground"
+                        : "hover:bg-white/10 text-white"
                     )}
                     aria-label="חיפוש"
                   >
@@ -301,7 +262,7 @@ export function Header() {
                       "p-2.5 rounded-xl transition-all duration-300 block",
                       isScrolled
                         ? "hover:bg-muted/80 text-foreground"
-                        : "hover:bg-white/10 text-primary-foreground"
+                        : "hover:bg-white/10 text-white"
                     )}
                     aria-label="מועדפים"
                   >
@@ -320,7 +281,7 @@ export function Header() {
                       "p-2.5 rounded-xl transition-all duration-300 block",
                       isScrolled
                         ? "hover:bg-muted/80 text-foreground"
-                        : "hover:bg-white/10 text-primary-foreground"
+                        : "hover:bg-white/10 text-white"
                     )}
                     aria-label="חשבון"
                   >
@@ -337,7 +298,7 @@ export function Header() {
                     "relative p-2.5 rounded-xl transition-all duration-300",
                     isScrolled
                       ? "hover:bg-muted/80 text-foreground"
-                      : "hover:bg-white/10 text-primary-foreground"
+                      : "hover:bg-white/10 text-white"
                   )}
                   aria-label="עגלת קניות"
                 >
@@ -361,8 +322,6 @@ export function Header() {
         </div>
       </header>
 
-      {/* Spacer for fixed header */}
-      <div className="h-16 lg:h-[calc(5rem+2.5rem)]" />
 
       {/* Cart Drawer */}
       <CartDrawer />

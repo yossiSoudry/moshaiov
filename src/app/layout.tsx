@@ -51,6 +51,7 @@ export default function RootLayout({
     <html lang="he" dir="rtl">
       <body
         className={`${heebo.variable} ${assistant.variable} font-sans antialiased min-h-screen flex flex-col`}
+        suppressHydrationWarning
       >
         <AuthProvider>
           <CartProvider>

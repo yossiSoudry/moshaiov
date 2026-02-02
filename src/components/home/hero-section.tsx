@@ -1,10 +1,9 @@
 'use client';
 
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { ArrowLeft, Sparkles, Diamond, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useRef } from 'react';
 
 // Floating diamond particles
 const DiamondParticle = ({ delay, x, y, size }: { delay: number; x: string; y: string; size: number }) => (
@@ -50,23 +49,10 @@ const SparkleEffect = ({ delay, x, y }: { delay: number; x: string; y: string })
 );
 
 export function HeroSection() {
-  const containerRef = useRef<HTMLElement>(null);
-  const { scrollY } = useScroll();
-
-  const backgroundY = useTransform(scrollY, [0, 500], [0, 150]);
-  const textY = useTransform(scrollY, [0, 500], [0, 100]);
-  const opacity = useTransform(scrollY, [0, 400], [1, 0]);
-
   return (
-    <section
-      ref={containerRef}
-      className="relative min-h-[100vh] flex items-center justify-center overflow-hidden bg-primary text-primary-foreground"
-    >
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-primary text-primary-foreground">
       {/* Animated gradient background */}
-      <motion.div
-        className="absolute inset-0"
-        style={{ y: backgroundY }}
-      >
+      <div className="absolute inset-0">
         {/* Base gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#151515] to-[#0a0a0a]" />
 
@@ -121,7 +107,7 @@ export function HeroSection() {
             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
           }}
         />
-      </motion.div>
+      </div>
 
       {/* Floating particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -230,10 +216,7 @@ export function HeroSection() {
       />
 
       {/* Content */}
-      <motion.div
-        className="container mx-auto px-4 relative z-10"
-        style={{ y: textY, opacity }}
-      >
+      <div className="container mx-auto px-4 relative z-10 pt-20 lg:pt-24">
         <div className="max-w-5xl mx-auto text-center">
           {/* Animated badge */}
           <motion.div
@@ -273,11 +256,7 @@ export function HeroSection() {
             >
               <span className="block">תכשיטים שמספרים</span>
               <motion.span
-                className="block mt-2 text-transparent bg-clip-text animate-gold-shimmer"
-                style={{
-                  backgroundImage: 'linear-gradient(120deg, #d4af37 0%, #f5e6c8 25%, #d4af37 50%, #f5e6c8 75%, #d4af37 100%)',
-                  backgroundSize: '500% 100%',
-                }}
+                className="block mt-2 gold-shimmer-text"
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
@@ -361,16 +340,16 @@ export function HeroSection() {
           >
             <div className="grid grid-cols-3 gap-8 lg:gap-16 max-w-3xl mx-auto">
               {[
-                { value: '40+', label: 'שנות ניסיון', delay: 0 },
-                { value: '10K+', label: 'לקוחות מרוצים', delay: 0.1 },
-                { value: '100%', label: 'זהב אמיתי', delay: 0.2 },
-              ].map((stat) => (
+                { value: '40+', label: 'שנות ניסיון' },
+                { value: '10K+', label: 'לקוחות מרוצים' },
+                { value: '100%', label: 'זהב אמיתי' },
+              ].map((stat, index) => (
                 <motion.div
                   key={stat.label}
                   className="text-center group"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 1.3 + stat.delay, duration: 0.5 }}
+                  transition={{ delay: 1.3 + index * 0.1, duration: 0.5 }}
                   whileHover={{ scale: 1.05 }}
                 >
                   <motion.div
@@ -400,33 +379,8 @@ export function HeroSection() {
             </div>
           </motion.div>
         </div>
-      </motion.div>
+      </div>
 
-      {/* Scroll indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2 }}
-        className="absolute bottom-10 left-1/2 -translate-x-1/2"
-      >
-        <motion.div
-          animate={{ y: [0, 12, 0] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          className="flex flex-col items-center gap-3"
-        >
-          <span className="text-xs text-primary-foreground/40 tracking-widest uppercase">גלול למטה</span>
-          <div className="w-6 h-10 border-2 border-primary-foreground/20 rounded-full flex justify-center pt-2">
-            <motion.div
-              animate={{ y: [0, 12, 0], opacity: [1, 0.3, 1] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="w-1.5 h-1.5 bg-gold-400 rounded-full"
-            />
-          </div>
-        </motion.div>
-      </motion.div>
-
-      {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent pointer-events-none" />
     </section>
   );
 }
