@@ -2,7 +2,7 @@ import { OmniSyncClient } from 'omni-sync-sdk';
 
 export const omni = new OmniSyncClient({
   connectionId: 'vc_tYZpo6sTEQL6y8aWRltQj',
-  baseUrl: 'https://fb3b42d6e683.ngrok-free.app',
+  baseUrl: 'http://localhost:4000',
 });
 
 // Cart helpers - save cart ID to localStorage

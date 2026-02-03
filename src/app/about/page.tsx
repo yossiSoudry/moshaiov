@@ -52,7 +52,7 @@ export default function AboutPage() {
   const timelineInView = useInView(timelineRef, { once: true, margin: "-100px" });
 
   return (
-    <div className="overflow-hidden">
+    <div className="overflow-hidden pt-16 lg:pt-20">
       {/* Hero Section */}
       <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
         {/* Background Image */}

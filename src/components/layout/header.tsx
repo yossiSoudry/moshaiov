@@ -41,6 +41,10 @@ export function Header() {
 
   const itemCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
+  // Only use transparent/white style on homepage with dark hero
+  const isHomepage = pathname === '/';
+  const useWhiteText = isHomepage && !isScrolled;
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -66,7 +70,7 @@ export function Header() {
       <header
         className={cn(
           'fixed top-0 left-0 right-0 z-50 transition-all duration-700',
-          isScrolled
+          isScrolled || !isHomepage
             ? 'bg-background/95 backdrop-blur-xl shadow-lg shadow-black/5'
             : 'bg-transparent'
         )}
@@ -74,7 +78,7 @@ export function Header() {
         {/* Main header */}
         <div className={cn(
           "transition-all duration-500",
-          isScrolled ? 'border-b border-border/50' : ''
+          (isScrolled || !isHomepage) ? 'border-b border-border/50' : ''
         )}>
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between h-16 lg:h-20">
@@ -84,7 +88,7 @@ export function Header() {
                 whileTap={{ scale: 0.95 }}
                 className={cn(
                   "lg:hidden p-2.5 rounded-xl transition-colors",
-                  isScrolled ? "hover:bg-muted/80 text-foreground" : "hover:bg-white/10 text-white"
+                  useWhiteText ? "hover:bg-white/10 text-white" : "hover:bg-muted/80 text-foreground"
                 )}
                 onClick={() => setIsMobileMenuOpen(true)}
                 aria-label="פתח תפריט"
@@ -144,14 +148,14 @@ export function Header() {
                   <motion.h1
                     className={cn(
                       "text-xl lg:text-2xl font-bold tracking-wider transition-colors duration-500",
-                      isScrolled ? "text-foreground" : "text-white"
+                      useWhiteText ? "text-white" : "text-foreground"
                     )}
                   >
                     MOSHAYOV
                   </motion.h1>
                   <p className={cn(
                     "text-[10px] lg:text-xs -mt-0.5 tracking-widest transition-colors duration-500",
-                    isScrolled ? "text-muted-foreground" : "text-white/70"
+                    useWhiteText ? "text-white/70" : "text-muted-foreground"
                   )}>
                     תכשיטי זהב ויהלומים
                   </p>
@@ -172,10 +176,10 @@ export function Header() {
                       className={cn(
                         'relative px-4 py-2 text-sm font-medium transition-all duration-300 rounded-lg group',
                         pathname === link.href
-                          ? isScrolled ? 'text-foreground' : 'text-white'
-                          : isScrolled
-                            ? 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                            : 'text-white/80 hover:text-white hover:bg-white/10'
+                          ? useWhiteText ? 'text-white' : 'text-foreground'
+                          : useWhiteText
+                            ? 'text-white/80 hover:text-white hover:bg-white/10'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                       )}
                     >
                       {link.label}
@@ -204,9 +208,9 @@ export function Header() {
                     onClick={() => setIsSearchOpen(!isSearchOpen)}
                     className={cn(
                       "p-2.5 rounded-xl transition-all duration-300",
-                      isScrolled
-                        ? "hover:bg-muted/80 text-foreground"
-                        : "hover:bg-white/10 text-white"
+                      useWhiteText
+                        ? "hover:bg-white/10 text-white"
+                        : "hover:bg-muted/80 text-foreground"
                     )}
                     aria-label="חיפוש"
                   >
@@ -260,9 +264,9 @@ export function Header() {
                     href="/favorites"
                     className={cn(
                       "p-2.5 rounded-xl transition-all duration-300 block",
-                      isScrolled
-                        ? "hover:bg-muted/80 text-foreground"
-                        : "hover:bg-white/10 text-white"
+                      useWhiteText
+                        ? "hover:bg-white/10 text-white"
+                        : "hover:bg-muted/80 text-foreground"
                     )}
                     aria-label="מועדפים"
                   >
@@ -279,9 +283,9 @@ export function Header() {
                     href={isAuthenticated ? '/account' : '/login'}
                     className={cn(
                       "p-2.5 rounded-xl transition-all duration-300 block",
-                      isScrolled
-                        ? "hover:bg-muted/80 text-foreground"
-                        : "hover:bg-white/10 text-white"
+                      useWhiteText
+                        ? "hover:bg-white/10 text-white"
+                        : "hover:bg-muted/80 text-foreground"
                     )}
                     aria-label="חשבון"
                   >
@@ -296,9 +300,9 @@ export function Header() {
                   onClick={toggleCart}
                   className={cn(
                     "relative p-2.5 rounded-xl transition-all duration-300",
-                    isScrolled
-                      ? "hover:bg-muted/80 text-foreground"
-                      : "hover:bg-white/10 text-white"
+                    useWhiteText
+                      ? "hover:bg-white/10 text-white"
+                      : "hover:bg-muted/80 text-foreground"
                   )}
                   aria-label="עגלת קניות"
                 >

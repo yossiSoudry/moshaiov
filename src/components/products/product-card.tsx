@@ -22,12 +22,12 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const { addToCart, isLoading } = useCartStore();
 
-  const productWithPrice = product as unknown as { price?: number };
+  const productWithPrice = product as unknown as { basePrice?: number; salePrice?: number | null };
   const variants = product.variants || [];
   const hasVariants = variants.length > 0;
   const prices = hasVariants
-    ? variants.map((v) => v.price ?? 0).filter((p): p is number => p != null)
-    : [productWithPrice.price ?? 0];
+    ? variants.map((v) => (v as unknown as { salePrice?: number | null; basePrice?: number }).salePrice ?? (v as unknown as { basePrice?: number }).basePrice ?? 0).filter((p): p is number => p != null)
+    : [productWithPrice.salePrice ?? productWithPrice.basePrice ?? 0];
   const validPrices = prices.length > 0 ? prices : [0];
   const minPrice = Math.min(...validPrices);
   const maxPrice = Math.max(...validPrices);
@@ -51,14 +51,17 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
   };
 
   const getStockDisplay = () => {
-    const inv = product.inventory as { trackingMode?: string; quantity?: number } | undefined;
+    const inv = product.inventory as { trackingMode?: string; available?: number; total?: number; inStock?: boolean } | undefined;
     if (!inv || inv.trackingMode === 'DISABLED') {
       return null;
     }
     if (inv.trackingMode === 'UNLIMITED') {
       return { text: 'במלאי', lowStock: false };
     }
-    const qty = inv.quantity ?? 0;
+    if (inv.inStock === false) {
+      return { text: 'אזל מהמלאי', lowStock: false, outOfStock: true };
+    }
+    const qty = inv.available ?? inv.total ?? 0;
     if (qty <= 0) {
       return { text: 'אזל מהמלאי', lowStock: false, outOfStock: true };
     }
@@ -150,8 +153,8 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
           {/* Badges */}
           <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
             {(() => {
-              const p = product as unknown as { price?: number; compareAtPrice?: number };
-              if (p.compareAtPrice && p.price && p.compareAtPrice > p.price) {
+              const p = product as unknown as { basePrice?: number; salePrice?: number | null };
+              if (p.salePrice && p.basePrice && p.basePrice > p.salePrice) {
                 return (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8, x: 10 }}
@@ -159,7 +162,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
                     transition={{ delay: index * 0.1 + 0.2 }}
                   >
                     <Badge variant="destructive" className="font-bold shadow-lg">
-                      -{Math.round((1 - p.price / p.compareAtPrice) * 100)}%
+                      -{Math.round((1 - p.salePrice / p.basePrice) * 100)}%
                     </Badge>
                   </motion.div>
                 );
@@ -258,11 +261,11 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
               {priceDisplay}
             </motion.span>
             {(() => {
-              const p = product as unknown as { price?: number; compareAtPrice?: number };
-              if (p.compareAtPrice && p.price && p.compareAtPrice > p.price) {
+              const p = product as unknown as { basePrice?: number; salePrice?: number | null };
+              if (p.salePrice && p.basePrice && p.basePrice > p.salePrice) {
                 return (
                   <span className="text-sm text-muted-foreground line-through">
-                    {formatPrice(p.compareAtPrice)}
+                    {formatPrice(p.basePrice)}
                   </span>
                 );
               }

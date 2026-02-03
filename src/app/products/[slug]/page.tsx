@@ -66,22 +66,27 @@ export default function ProductPage() {
     await addToCart(product.id, selectedVariant?.id, quantity);
   };
 
-  const productWithPrice = product as { price?: number; compareAtPrice?: number } | null;
-  const variantWithPrice = selectedVariant as { price?: number; compareAtPrice?: number } | null;
-  const currentPrice = variantWithPrice?.price ?? productWithPrice?.price ?? 0;
-  const compareAtPrice = variantWithPrice?.compareAtPrice ?? productWithPrice?.compareAtPrice;
+  const productWithPrice = product as { basePrice?: number; salePrice?: number | null } | null;
+  const variantWithPrice = selectedVariant as { basePrice?: number; salePrice?: number | null } | null;
+  // If salePrice exists, it's the current price and basePrice is the original
+  const currentPrice = variantWithPrice?.salePrice ?? variantWithPrice?.basePrice ?? productWithPrice?.salePrice ?? productWithPrice?.basePrice ?? 0;
+  const compareAtPrice = (variantWithPrice?.salePrice ?? productWithPrice?.salePrice) ? (variantWithPrice?.basePrice ?? productWithPrice?.basePrice) : undefined;
   const hasDiscount = compareAtPrice && compareAtPrice > currentPrice;
 
   // Get stock info
   const getStockDisplay = () => {
-    const inventory = product?.inventory as { trackingMode?: string; quantity?: number } | undefined;
+    const inventory = product?.inventory as { trackingMode?: string; available?: number; total?: number; inStock?: boolean } | undefined;
     if (!inventory || inventory.trackingMode === 'DISABLED') {
-      return null;
+      return { text: 'לא זמין', inStock: false };
     }
     if (inventory.trackingMode === 'UNLIMITED') {
       return { text: 'במלאי', inStock: true };
     }
-    const qty = inventory.quantity ?? 0;
+    // Use inStock if available, otherwise check available quantity
+    if (inventory.inStock === false) {
+      return { text: 'אזל מהמלאי', inStock: false };
+    }
+    const qty = inventory.available ?? inventory.total ?? 0;
     if (qty <= 0) {
       return { text: 'אזל מהמלאי', inStock: false };
     }
@@ -129,7 +134,7 @@ export default function ProductPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pt-16 lg:pt-20">
       {/* Breadcrumb */}
       <div className="bg-muted py-4">
         <div className="container mx-auto px-4">
@@ -164,6 +169,7 @@ export default function ProductPage() {
                   className="object-cover"
                   sizes="(max-width: 1024px) 100vw, 50vw"
                   priority
+                  unoptimized
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -211,6 +217,7 @@ export default function ProductPage() {
                       fill
                       className="object-cover"
                       sizes="80px"
+                      unoptimized
                     />
                   </button>
                 ))}
@@ -289,9 +296,9 @@ export default function ProductPage() {
                         )}
                       >
                         {variant.name}
-                        {variant.price !== productWithPrice?.price && variant.price != null && (
+                        {(variant as { basePrice?: number }).basePrice !== productWithPrice?.basePrice && (variant as { basePrice?: number }).basePrice != null && (
                           <span className="ms-2 text-xs">
-                            ({formatPrice(variant.price)})
+                            ({formatPrice((variant as { salePrice?: number | null; basePrice?: number }).salePrice ?? (variant as { basePrice?: number }).basePrice!)})
                           </span>
                         )}
                       </button>

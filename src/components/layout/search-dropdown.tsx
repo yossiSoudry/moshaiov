@@ -106,7 +106,7 @@ export function SearchDropdown({ query, onClose }: SearchDropdownProps) {
             <div className="flex-1 min-w-0">
               <h4 className="font-medium text-sm truncate">{product.name}</h4>
               <p className="text-sm text-muted-foreground">
-                {formatPrice(product.price ?? 0)}
+                {formatPrice((product as unknown as { salePrice?: number | null; basePrice?: number }).salePrice ?? (product as unknown as { basePrice?: number }).basePrice ?? 0)}
               </p>
             </div>
           </Link>

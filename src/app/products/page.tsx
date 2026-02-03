@@ -26,6 +26,16 @@ import type { Product } from 'omni-sync-sdk';
 
 const PRODUCTS_PER_PAGE = 50;
 
+// Category slug to Hebrew name mapping
+const CATEGORY_MAP: Record<string, string> = {
+  rings: 'טבעות',
+  necklaces: 'שרשראות',
+  earrings: 'עגילים',
+  bracelets: 'צמידים',
+  pendants: 'תליונים',
+  watches: 'שעונים',
+};
+
 function ProductsContent() {
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
@@ -38,9 +48,15 @@ function ProductsContent() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState(initialSearch);
+  const [category, setCategory] = useState(initialCategory);
   const [sortBy, setSortBy] = useState('newest');
   const [gridCols, setGridCols] = useState<2 | 3 | 4>(3);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // Update category when URL changes
+  useEffect(() => {
+    setCategory(initialCategory);
+  }, [initialCategory]);
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -123,15 +139,29 @@ function ProductsContent() {
     setSearch('');
   };
 
+  // Filter by category
+  const filteredProducts = category
+    ? products.filter((product) => {
+        const productCategories = product.categories as unknown as { name?: string; slug?: string }[] | undefined;
+        if (!productCategories) return false;
+        const categoryName = CATEGORY_MAP[category];
+        return productCategories.some(
+          (cat) => cat.name === categoryName || cat.slug === category
+        );
+      })
+    : products;
+
   // Sort products
-  const sortedProducts = [...products].sort((a, b) => {
-    const aWithPrice = a as unknown as { price?: number };
-    const bWithPrice = b as unknown as { price?: number };
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    const aWithPrice = a as unknown as { basePrice?: number; salePrice?: number | null };
+    const bWithPrice = b as unknown as { basePrice?: number; salePrice?: number | null };
+    const aPrice = aWithPrice.salePrice ?? aWithPrice.basePrice ?? 0;
+    const bPrice = bWithPrice.salePrice ?? bWithPrice.basePrice ?? 0;
     switch (sortBy) {
       case 'price-asc':
-        return (aWithPrice.price ?? 0) - (bWithPrice.price ?? 0);
+        return aPrice - bPrice;
       case 'price-desc':
-        return (bWithPrice.price ?? 0) - (aWithPrice.price ?? 0);
+        return bPrice - aPrice;
       case 'name':
         return a.name.localeCompare(b.name, 'he');
       default:
@@ -142,7 +172,7 @@ function ProductsContent() {
   return (
     <div className="min-h-screen">
       {/* Hero Header */}
-      <div className="relative bg-gradient-to-b from-muted via-muted/80 to-background py-16 lg:py-24 overflow-hidden">
+      <div className="relative bg-gradient-to-b from-muted via-muted/80 to-background pt-24 lg:pt-32 pb-16 lg:pb-24 overflow-hidden">
         {/* Background decorations */}
         <div className="absolute inset-0 pointer-events-none">
           {/* Gradient orbs */}
@@ -150,14 +180,18 @@ function ProductsContent() {
           <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-gold-400/5 rounded-full blur-3xl" />
 
           {/* Floating diamonds */}
-          {[...Array(6)].map((_, i) => (
+          {[
+            { top: '25%', left: '15%' },
+            { top: '40%', left: '75%' },
+            { top: '60%', left: '25%' },
+            { top: '35%', left: '85%' },
+            { top: '70%', left: '45%' },
+            { top: '50%', left: '65%' },
+          ].map((pos, i) => (
             <motion.div
               key={i}
               className="absolute"
-              style={{
-                top: `${20 + Math.random() * 60}%`,
-                left: `${10 + Math.random() * 80}%`,
-              }}
+              style={pos}
               animate={{
                 y: [0, -20, 0],
                 rotate: [0, 180, 360],
@@ -199,17 +233,27 @@ function ProductsContent() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="text-4xl lg:text-5xl xl:text-6xl font-bold mb-6"
             >
-              <span className="relative inline-block">
-                <span className="relative z-10">הקולקציה</span>
-                <motion.span
-                  className="absolute -inset-2 bg-gold-500/10 blur-xl rounded-full"
-                  animate={{ opacity: [0.5, 0.8, 0.5] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                />
-              </span>{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-500 to-gold-400">
-                שלנו
-              </span>
+              {category && CATEGORY_MAP[category] ? (
+                <>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-500 to-gold-400">
+                    {CATEGORY_MAP[category]}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="relative inline-block">
+                    <span className="relative z-10">הקולקציה</span>
+                    <motion.span
+                      className="absolute -inset-2 bg-gold-500/10 blur-xl rounded-full"
+                      animate={{ opacity: [0.5, 0.8, 0.5] }}
+                      transition={{ duration: 3, repeat: Infinity }}
+                    />
+                  </span>{' '}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-500 to-gold-400">
+                    שלנו
+                  </span>
+                </>
+              )}
             </motion.h1>
 
             <motion.p
@@ -346,26 +390,40 @@ function ProductsContent() {
           </div>
         </motion.div>
 
-        {/* Active search indicator */}
+        {/* Active filters indicator */}
         <AnimatePresence>
-          {search && (
+          {(search || category) && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex items-center gap-3 mb-6"
+              className="flex flex-wrap items-center gap-3 mb-6"
             >
-              <span className="text-sm text-muted-foreground">תוצאות עבור:</span>
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 rounded-full text-sm font-medium">
-                <Search className="h-3 w-3 text-gold-500" />
-                {search}
-                <button
-                  onClick={clearSearch}
-                  className="p-0.5 rounded-full hover:bg-gold-500/20 transition-colors"
+              <span className="text-sm text-muted-foreground">מסננים:</span>
+
+              {category && CATEGORY_MAP[category] && (
+                <a
+                  href="/products"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 rounded-full text-sm font-medium hover:bg-gold-500/20 transition-colors"
                 >
+                  <Diamond className="h-3 w-3 text-gold-500" />
+                  {CATEGORY_MAP[category]}
                   <X className="h-3 w-3" />
-                </button>
-              </span>
+                </a>
+              )}
+
+              {search && (
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 rounded-full text-sm font-medium">
+                  <Search className="h-3 w-3 text-gold-500" />
+                  {search}
+                  <button
+                    onClick={clearSearch}
+                    className="p-0.5 rounded-full hover:bg-gold-500/20 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -379,9 +437,9 @@ function ProductsContent() {
           >
             <Diamond className="h-4 w-4 text-gold-500" />
             <p className="text-sm text-muted-foreground">
-              מציג <span className="font-semibold text-foreground">{products.length}</span> מוצרים
-              {totalPages > 1 && (
-                <span> • עמוד {page} מתוך {totalPages}</span>
+              מציג <span className="font-semibold text-foreground">{sortedProducts.length}</span> מוצרים
+              {category && CATEGORY_MAP[category] && (
+                <span> בקטגוריית {CATEGORY_MAP[category]}</span>
               )}
             </p>
           </motion.div>

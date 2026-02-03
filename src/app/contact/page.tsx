@@ -75,7 +75,7 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="overflow-hidden">
+    <div className="overflow-hidden pt-16 lg:pt-20">
       {/* Hero Section */}
       <section className="relative py-24 lg:py-32 bg-primary text-primary-foreground overflow-hidden">
         {/* Background effects */}
