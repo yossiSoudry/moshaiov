@@ -16,18 +16,18 @@ export function CartDrawer() {
   const subtotal = cartWithTotals?.totals?.subtotal || 0;
 
   const drawerVariants = {
-    closed: { x: '-100%' },
+    closed: { x: '100%' },
     open: { x: 0 },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, x: -20 },
+    hidden: { opacity: 0, x: 20 },
     visible: (i: number) => ({
       opacity: 1,
       x: 0,
       transition: { delay: i * 0.1 + 0.2 },
     }),
-    exit: { opacity: 0, x: -50, transition: { duration: 0.2 } },
+    exit: { opacity: 0, x: 50, transition: { duration: 0.2 } },
   };
 
   return (
