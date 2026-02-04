@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { CartProvider } from "@/components/providers/cart-provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { FlyToCartProvider } from "@/components/ui/fly-to-cart";
 
 const heebo = Heebo({
   variable: "--font-heebo",
@@ -55,9 +56,11 @@ export default function RootLayout({
       >
         <AuthProvider>
           <CartProvider>
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
+            <FlyToCartProvider>
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </FlyToCartProvider>
           </CartProvider>
         </AuthProvider>
       </body>

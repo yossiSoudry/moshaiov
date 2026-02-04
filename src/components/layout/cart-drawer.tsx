@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -11,12 +12,16 @@ import { formatPrice } from '@/lib/utils';
 export function CartDrawer() {
   const { cart, isOpen, isLoading, toggleCart, updateQuantity, removeItem } = useCartStore();
 
-  const items = cart?.items || [];
-  const cartWithTotals = cart as { totals?: { subtotal?: number } } | null;
-  const subtotal = cartWithTotals?.totals?.subtotal || 0;
+  useEffect(() => {
+    console.log('CartDrawer: isOpen changed to:', isOpen);
+  }, [isOpen]);
 
+  const items = cart?.items || [];
+  const subtotal = cart?.subtotal ? parseFloat(cart.subtotal) : 0;
+
+  // RTL: drawer comes from the left side (visual right in RTL)
   const drawerVariants = {
-    closed: { x: '100%' },
+    closed: { x: '-100%' },
     open: { x: 0 },
   };
 
@@ -50,7 +55,7 @@ export function CartDrawer() {
             animate="open"
             exit="closed"
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-0 right-0 h-full w-full max-w-md bg-background shadow-2xl z-50 flex flex-col overflow-hidden"
+            className="fixed top-0 left-0 h-full w-full max-w-md bg-background shadow-2xl z-50 flex flex-col overflow-hidden"
           >
             {/* Decorative top line */}
             <div className="h-1 bg-gradient-to-r from-gold-400 via-gold-500 to-gold-400" />
@@ -133,7 +138,7 @@ export function CartDrawer() {
                     {items.map((item, index) => {
                       const productImages = item.product?.images as { url?: string }[] | undefined;
                       const firstImage = productImages?.[0];
-                      const itemWithPrice = item as unknown as { price?: number };
+                      const itemPrice = parseFloat(item.unitPrice || '0') * item.quantity;
                       return (
                         <motion.div
                           key={item.id}
@@ -203,7 +208,7 @@ export function CartDrawer() {
 
                               {/* Price */}
                               <p className="font-bold text-gold-600">
-                                {formatPrice(itemWithPrice.price || 0)}
+                                {formatPrice(itemPrice)}
                               </p>
                             </div>
                           </div>

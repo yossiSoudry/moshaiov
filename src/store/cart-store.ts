@@ -2,115 +2,219 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { omni, getCartId, setCartId, clearCartId } from '@/lib/omni-sync';
-import type { Cart } from 'omni-sync-sdk';
+import { omni } from '@/lib/omni-sync';
+import type { Product } from 'omni-sync-sdk';
+
+// Local cart item structure
+interface LocalCartItem {
+  id: string;
+  productId: string;
+  variantId?: string;
+  quantity: number;
+  product: {
+    id: string;
+    name: string;
+    images?: { url: string }[];
+  };
+  variant?: {
+    id: string;
+    name: string;
+  };
+  unitPrice: string;
+}
+
+// Local cart structure (mimics API cart)
+interface LocalCart {
+  id: string;
+  items: LocalCartItem[];
+  subtotal: string;
+  itemCount: number;
+}
 
 interface CartState {
-  cart: Cart | null;
+  cart: LocalCart | null;
   isLoading: boolean;
   isOpen: boolean;
   error: string | null;
 
   // Actions
-  initializeCart: () => Promise<void>;
   addToCart: (productId: string, variantId?: string, quantity?: number) => Promise<void>;
-  updateQuantity: (itemId: string, quantity: number) => Promise<void>;
-  removeItem: (itemId: string) => Promise<void>;
+  updateQuantity: (itemId: string, quantity: number) => void;
+  removeItem: (itemId: string) => void;
   applyCoupon: (code: string) => Promise<void>;
   clearCart: () => void;
   toggleCart: () => void;
-  setCart: (cart: Cart) => void;
+  openCart: () => void;
+  closeCart: () => void;
 }
 
-export const useCartStore = create<CartState>()((set, get) => ({
-  cart: null,
-  isLoading: false,
-  isOpen: false,
-  error: null,
+// Generate unique ID
+const generateId = () => Math.random().toString(36).substring(2, 15);
 
-  initializeCart: async () => {
-    const cartId = getCartId();
-    if (cartId) {
-      try {
+// Calculate subtotal
+const calculateSubtotal = (items: LocalCartItem[]): string => {
+  const total = items.reduce((sum, item) => {
+    return sum + (parseFloat(item.unitPrice) * item.quantity);
+  }, 0);
+  return total.toString();
+};
+
+export const useCartStore = create<CartState>()(
+  persist(
+    (set, get) => ({
+      cart: null,
+      isLoading: false,
+      isOpen: false,
+      error: null,
+
+      addToCart: async (productId: string, variantId?: string, quantity: number = 1) => {
+        console.log('addToCart called:', { productId, variantId, quantity });
         set({ isLoading: true, error: null });
-        const cart = await omni.getCart(cartId);
-        set({ cart, isLoading: false });
-      } catch {
-        // Cart might be expired, clear it
-        clearCartId();
-        set({ cart: null, isLoading: false });
-      }
+
+        try {
+          // Fetch product details from API
+          const product = await omni.getProduct(productId);
+          console.log('Product fetched:', product);
+
+          const currentCart = get().cart;
+          const items = currentCart?.items || [];
+
+          // Check if item already exists
+          const existingItemIndex = items.findIndex(
+            item => item.productId === productId && item.variantId === variantId
+          );
+
+          // Get price
+          const productWithPrice = product as Product & { basePrice?: number; salePrice?: number | null };
+          let price = productWithPrice.salePrice ?? productWithPrice.basePrice ?? 0;
+
+          // Get variant info and price
+          let variantInfo: { id: string; name: string } | undefined;
+          if (variantId && product.variants) {
+            const variant = product.variants.find(v => v.id === variantId);
+            if (variant) {
+              const variantWithPrice = variant as { salePrice?: number | null; price?: number | null; name?: string };
+              price = variantWithPrice.salePrice ?? variantWithPrice.price ?? price;
+              variantInfo = {
+                id: variant.id,
+                name: variantWithPrice.name || '',
+              };
+            }
+          }
+
+          let newItems: LocalCartItem[];
+
+          if (existingItemIndex >= 0) {
+            // Update existing item quantity
+            newItems = items.map((item, index) =>
+              index === existingItemIndex
+                ? { ...item, quantity: item.quantity + quantity }
+                : item
+            );
+          } else {
+            // Add new item
+            const newItem: LocalCartItem = {
+              id: generateId(),
+              productId,
+              variantId,
+              quantity,
+              product: {
+                id: product.id,
+                name: product.name,
+                images: product.images,
+              },
+              variant: variantInfo,
+              unitPrice: price.toString(),
+            };
+            newItems = [...items, newItem];
+          }
+
+          const newCart: LocalCart = {
+            id: currentCart?.id || generateId(),
+            items: newItems,
+            subtotal: calculateSubtotal(newItems),
+            itemCount: newItems.reduce((sum, item) => sum + item.quantity, 0),
+          };
+
+          set({ cart: newCart, isLoading: false });
+
+        } catch (err) {
+          console.error('Add to cart error:', err);
+          set({
+            error: err instanceof Error ? err.message : 'שגיאה בהוספה לעגלה',
+            isLoading: false
+          });
+        }
+      },
+
+      updateQuantity: (itemId: string, quantity: number) => {
+        const currentCart = get().cart;
+        if (!currentCart) return;
+
+        if (quantity <= 0) {
+          // Remove item if quantity is 0 or less
+          get().removeItem(itemId);
+          return;
+        }
+
+        const newItems = currentCart.items.map(item =>
+          item.id === itemId ? { ...item, quantity } : item
+        );
+
+        set({
+          cart: {
+            ...currentCart,
+            items: newItems,
+            subtotal: calculateSubtotal(newItems),
+            itemCount: newItems.reduce((sum, item) => sum + item.quantity, 0),
+          },
+        });
+      },
+
+      removeItem: (itemId: string) => {
+        const currentCart = get().cart;
+        if (!currentCart) return;
+
+        const newItems = currentCart.items.filter(item => item.id !== itemId);
+
+        if (newItems.length === 0) {
+          set({ cart: null });
+        } else {
+          set({
+            cart: {
+              ...currentCart,
+              items: newItems,
+              subtotal: calculateSubtotal(newItems),
+              itemCount: newItems.reduce((sum, item) => sum + item.quantity, 0),
+            },
+          });
+        }
+      },
+
+      applyCoupon: async (_code: string) => {
+        // Local cart doesn't support coupons yet
+        set({ error: 'קופונים לא נתמכים כרגע' });
+      },
+
+      clearCart: () => {
+        set({ cart: null });
+      },
+
+      toggleCart: () => {
+        set((state) => ({ isOpen: !state.isOpen }));
+      },
+
+      openCart: () => {
+        set({ isOpen: true });
+      },
+
+      closeCart: () => {
+        set({ isOpen: false });
+      },
+    }),
+    {
+      name: 'moshayov-cart',
+      partialize: (state) => ({ cart: state.cart }),
     }
-  },
-
-  addToCart: async (productId: string, variantId?: string, quantity: number = 1) => {
-    set({ isLoading: true, error: null });
-    try {
-      let cartId = getCartId();
-
-      // Create cart if doesn't exist
-      if (!cartId) {
-        const newCart = await omni.createCart();
-        cartId = newCart.id;
-        setCartId(cartId);
-      }
-
-      const cart = await omni.addToCart(cartId, { productId, variantId, quantity });
-      set({ cart, isLoading: false, isOpen: true });
-    } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'שגיאה בהוספה לעגלה', isLoading: false });
-    }
-  },
-
-  updateQuantity: async (itemId: string, quantity: number) => {
-    const cartId = getCartId();
-    if (!cartId) return;
-
-    set({ isLoading: true, error: null });
-    try {
-      const cart = await omni.updateCartItem(cartId, itemId, { quantity });
-      set({ cart, isLoading: false });
-    } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'שגיאה בעדכון כמות', isLoading: false });
-    }
-  },
-
-  removeItem: async (itemId: string) => {
-    const cartId = getCartId();
-    if (!cartId) return;
-
-    set({ isLoading: true, error: null });
-    try {
-      const cart = await omni.removeCartItem(cartId, itemId);
-      set({ cart, isLoading: false });
-    } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'שגיאה בהסרת פריט', isLoading: false });
-    }
-  },
-
-  applyCoupon: async (code: string) => {
-    const cartId = getCartId();
-    if (!cartId) return;
-
-    set({ isLoading: true, error: null });
-    try {
-      const cart = await omni.applyCoupon(cartId, code);
-      set({ cart, isLoading: false });
-    } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'קוד קופון לא תקין', isLoading: false });
-    }
-  },
-
-  clearCart: () => {
-    clearCartId();
-    set({ cart: null });
-  },
-
-  toggleCart: () => {
-    set((state) => ({ isOpen: !state.isOpen }));
-  },
-
-  setCart: (cart: Cart) => {
-    set({ cart });
-  },
-}));
+  )
+);

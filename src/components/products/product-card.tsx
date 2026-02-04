@@ -1,26 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, ShoppingBag, Eye, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Heart, ShoppingBag, Sparkles, Star } from 'lucide-react';
 import { cn, formatPrice, formatPriceRange } from '@/lib/utils';
 import { useCartStore } from '@/store/cart-store';
+import { useFlyToCart } from '@/components/ui/fly-to-cart';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import type { Product } from 'omni-sync-sdk';
 
 interface ProductCardProps {
   product: Product;
   index?: number;
+  variant?: 'light' | 'dark';
 }
 
-export function ProductCard({ product, index = 0 }: ProductCardProps) {
+export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const imageRef = useRef<HTMLDivElement>(null);
   const { addToCart, isLoading } = useCartStore();
+  const { triggerFly } = useFlyToCart();
+
+  const isLight = variant === 'light';
 
   const productWithPrice = product as unknown as { basePrice?: number; salePrice?: number | null };
   const variants = product.variants || [];
@@ -36,10 +43,25 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
       ? formatPrice(minPrice)
       : formatPriceRange(minPrice, maxPrice);
 
+  // Mock rating data (can be replaced with real data when available)
+  const rating = 5;
+  const reviewCount = Math.floor(Math.random() * 150) + 50;
+
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!hasVariants) {
+      // Trigger fly animation
+      if (imageRef.current) {
+        const rect = imageRef.current.getBoundingClientRect();
+        triggerFly({
+          imageUrl: product.images?.[0]?.url || '',
+          startX: rect.left,
+          startY: rect.top,
+          startWidth: rect.width,
+          startHeight: rect.height,
+        });
+      }
       await addToCart(product.id);
     }
   };
@@ -72,6 +94,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
   };
 
   const stockInfo = getStockDisplay();
+  const isFeatured = product.tags?.includes('featured') || product.tags?.includes('new');
 
   return (
     <motion.div
@@ -85,215 +108,222 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <div className="relative aspect-square bg-muted rounded-2xl overflow-hidden mb-4">
-          {/* Shimmer loading state */}
-          {!imageLoaded && product.images?.[0]?.url && (
-            <div className="absolute inset-0 animate-shimmer" />
-          )}
+        <Card className={cn(
+          "overflow-hidden backdrop-blur-sm transition-all duration-500 hover:shadow-xl hover:shadow-gold-500/5 p-0 gap-0",
+          isLight
+            ? "border-neutral-200 bg-white hover:border-gold-500/40"
+            : "border-white/10 bg-neutral-900/80 hover:border-gold-500/30"
+        )}>
+          {/* Image Container */}
+          <div
+            ref={imageRef}
+            className={cn(
+              "relative aspect-square overflow-hidden",
+              isLight ? "bg-neutral-100" : "bg-neutral-800"
+            )}
+          >
+            {/* Shimmer loading state */}
+            {!imageLoaded && product.images?.[0]?.url && (
+              <div className="absolute inset-0 animate-shimmer" />
+            )}
 
-          {/* Main Image */}
-          {product.images?.[0]?.url ? (
-            <>
-              <Image
-                src={product.images[0].url}
-                alt={product.name}
-                fill
-                className={cn(
-                  'object-cover transition-all duration-700 ease-out',
-                  isHovered && product.images[1] ? 'opacity-0 scale-100' : 'opacity-100 scale-100',
-                  imageLoaded ? '' : 'opacity-0'
-                )}
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                onLoad={() => setImageLoaded(true)}
-              />
-              {/* Second image on hover */}
-              {product.images[1] && (
+            {/* Main Image */}
+            {product.images?.[0]?.url ? (
+              <>
                 <Image
-                  src={product.images[1].url}
+                  src={product.images[0].url}
                   alt={product.name}
                   fill
                   className={cn(
                     'object-cover transition-all duration-700 ease-out',
-                    isHovered ? 'opacity-100 scale-105' : 'opacity-0 scale-100'
+                    isHovered && product.images[1] ? 'opacity-0 scale-100' : 'opacity-100 scale-100',
+                    imageLoaded ? '' : 'opacity-0'
                   )}
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  onLoad={() => setImageLoaded(true)}
                 />
-              )}
-            </>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-gradient-to-br from-muted to-muted/50">
-              <Sparkles className="h-12 w-12 opacity-30" />
-            </div>
-          )}
-
-          {/* Gradient overlay on hover */}
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isHovered ? 1 : 0 }}
-            transition={{ duration: 0.3 }}
-          />
-
-          {/* Gold shimmer effect on hover */}
-          <motion.div
-            className="absolute inset-0 pointer-events-none overflow-hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isHovered ? 1 : 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-gold-400/10 to-transparent group-hover:translate-x-full transition-transform duration-1000" />
-          </motion.div>
-
-          {/* Border glow on hover */}
-          <motion.div
-            className="absolute inset-0 rounded-2xl border-2 border-gold-500/0 transition-colors duration-500 pointer-events-none"
-            animate={{ borderColor: isHovered ? 'rgba(212,175,55,0.3)' : 'rgba(212,175,55,0)' }}
-          />
-
-          {/* Badges */}
-          <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
-            {(() => {
-              const p = product as unknown as { basePrice?: number; salePrice?: number | null };
-              if (p.salePrice && p.basePrice && p.basePrice > p.salePrice) {
-                return (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8, x: 10 }}
-                    animate={{ opacity: 1, scale: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 + 0.2 }}
-                  >
-                    <Badge variant="destructive" className="font-bold shadow-lg">
-                      -{Math.round((1 - p.salePrice / p.basePrice) * 100)}%
-                    </Badge>
-                  </motion.div>
-                );
-              }
-              return null;
-            })()}
-            {product.tags?.includes('new') && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8, x: 10 }}
-                animate={{ opacity: 1, scale: 1, x: 0 }}
-                transition={{ delay: index * 0.1 + 0.3 }}
-              >
-                <Badge variant="gold" className="font-semibold shadow-lg flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />
-                  חדש
-                </Badge>
-              </motion.div>
-            )}
-            {stockInfo?.lowStock && (
-              <Badge variant="destructive" className="shadow-lg">{stockInfo.text}</Badge>
-            )}
-            {stockInfo?.outOfStock && (
-              <Badge variant="secondary" className="shadow-lg">{stockInfo.text}</Badge>
-            )}
-          </div>
-
-          {/* Favorite button */}
-          <motion.button
-            onClick={handleFavorite}
-            className={cn(
-              'absolute top-3 left-3 p-2.5 rounded-xl transition-all duration-300 z-10',
-              isFavorite
-                ? 'bg-destructive text-destructive-foreground shadow-lg'
-                : 'bg-background/90 backdrop-blur-sm hover:bg-background text-foreground shadow-md'
-            )}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            aria-label={isFavorite ? 'הסר מהמועדפים' : 'הוסף למועדפים'}
-          >
-            <Heart
-              className={cn('h-4 w-4 transition-all duration-300', isFavorite && 'fill-current scale-110')}
-            />
-          </motion.button>
-
-          {/* Quick actions */}
-          <AnimatePresence>
-            {isHovered && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute bottom-4 left-4 right-4 flex gap-2 z-10"
-              >
-                {!hasVariants && !stockInfo?.outOfStock && (
-                  <Button
-                    size="sm"
-                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl rounded-xl h-11 font-medium"
-                    onClick={handleAddToCart}
-                    disabled={isLoading}
-                  >
-                    <ShoppingBag className="h-4 w-4 me-2" />
-                    הוסף לעגלה
-                  </Button>
+                {/* Second image on hover */}
+                {product.images[1] && (
+                  <Image
+                    src={product.images[1].url}
+                    alt={product.name}
+                    fill
+                    className={cn(
+                      'object-cover transition-all duration-700 ease-out',
+                      isHovered ? 'opacity-100 scale-105' : 'opacity-0 scale-100'
+                    )}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  />
                 )}
-                {hasVariants && (
-                  <Button
-                    size="sm"
-                    className="flex-1 bg-background/95 backdrop-blur-sm hover:bg-background text-foreground shadow-xl rounded-xl h-11 font-medium border border-border/50"
-                  >
-                    <Eye className="h-4 w-4 me-2" />
-                    צפה באפשרויות
-                  </Button>
-                )}
-              </motion.div>
+              </>
+            ) : (
+              <div className={cn(
+                "w-full h-full flex items-center justify-center",
+                isLight
+                  ? "text-neutral-300 bg-gradient-to-br from-neutral-100 to-neutral-200"
+                  : "text-white/30 bg-gradient-to-br from-neutral-800 to-neutral-900"
+              )}>
+                <Sparkles className="h-12 w-12 opacity-30" />
+              </div>
             )}
-          </AnimatePresence>
-        </div>
 
-        {/* Product info */}
-        <div className="space-y-2 px-1">
-          <motion.h3
-            className="font-semibold text-foreground group-hover:text-gold-600 transition-colors duration-300 line-clamp-2 leading-snug"
-            layout
-          >
-            {product.name}
-          </motion.h3>
-
-          <div className="flex items-center gap-2">
-            <motion.span
-              className="text-lg font-bold text-foreground"
+            {/* Gradient overlay on hover */}
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: index * 0.1 + 0.2 }}
+              animate={{ opacity: isHovered ? 1 : 0 }}
+              transition={{ duration: 0.3 }}
+            />
+
+            {/* Gold shimmer effect on hover */}
+            <motion.div
+              className="absolute inset-0 pointer-events-none overflow-hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: isHovered ? 1 : 0 }}
+              transition={{ duration: 0.3 }}
             >
-              {priceDisplay}
-            </motion.span>
-            {(() => {
-              const p = product as unknown as { basePrice?: number; salePrice?: number | null };
-              if (p.salePrice && p.basePrice && p.basePrice > p.salePrice) {
-                return (
-                  <span className="text-sm text-muted-foreground line-through">
-                    {formatPrice(p.basePrice)}
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-gold-400/20 to-transparent group-hover:translate-x-full transition-transform duration-1000" />
+            </motion.div>
+
+            {/* Favorite button */}
+            <motion.button
+              onClick={handleFavorite}
+              className={cn(
+                'absolute top-4 left-4 p-2.5 rounded-full transition-all duration-300 z-10',
+                isFavorite
+                  ? 'bg-black/90 backdrop-blur-sm shadow-lg shadow-gold-500/30'
+                  : isLight
+                    ? 'bg-white/90 backdrop-blur-sm hover:bg-white text-neutral-400 hover:text-neutral-600 shadow-md'
+                    : 'bg-black/80 backdrop-blur-sm hover:bg-black text-white/60 hover:text-white shadow-md'
+              )}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              aria-label={isFavorite ? 'הסר מהמועדפים' : 'הוסף למועדפים'}
+            >
+              <Heart
+                className={cn(
+                  'h-5 w-5 transition-all duration-300',
+                  isFavorite && 'fill-gold-400 text-gold-500 scale-110'
+                )}
+              />
+            </motion.button>
+
+            {/* Featured/Sale badge */}
+            {(isFeatured || (productWithPrice.salePrice && productWithPrice.basePrice && productWithPrice.basePrice > productWithPrice.salePrice)) && (
+              <div className="absolute top-4 right-4 z-10">
+                {productWithPrice.salePrice && productWithPrice.basePrice && productWithPrice.basePrice > productWithPrice.salePrice ? (
+                  <span className="bg-destructive text-destructive-foreground px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">
+                    -{Math.round((1 - productWithPrice.salePrice / productWithPrice.basePrice) * 100)}%
                   </span>
-                );
-              }
-              return null;
-            })()}
+                ) : isFeatured ? (
+                  <span className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-medium shadow-md",
+                    isLight
+                      ? "bg-neutral-900 text-white"
+                      : "bg-black/80 text-white border border-white/20"
+                  )}>
+                    מומלץ
+                  </span>
+                ) : null}
+              </div>
+            )}
+
+            {/* Stock badges */}
+            {stockInfo && (
+              <div className="absolute bottom-4 right-4 z-10">
+                <Badge variant={stockInfo.outOfStock ? 'secondary' : 'destructive'} className="shadow-lg">
+                  {stockInfo.text}
+                </Badge>
+              </div>
+            )}
           </div>
 
-          {/* Category */}
-          {(() => {
-            const categories = product.categories as unknown as { name?: string }[] | undefined;
-            const firstCategory = categories?.[0];
-            if (!firstCategory?.name) return null;
-            return (
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-gold-500" />
-                {firstCategory.name}
-              </p>
-            );
-          })()}
+          {/* Product Info */}
+          <CardContent className="p-5 space-y-3">
+            <h3 className={cn(
+              "font-semibold text-lg leading-tight line-clamp-2 transition-colors duration-300",
+              isLight
+                ? "text-neutral-900 group-hover:text-gold-600"
+                : "text-white group-hover:text-gold-400"
+            )}>
+              {product.name}
+            </h3>
 
-          {/* Hover indicator line */}
-          <motion.div
-            className="h-0.5 bg-gradient-to-r from-gold-400 to-gold-600 rounded-full origin-right"
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: isHovered ? 1 : 0 }}
-            transition={{ duration: 0.3 }}
-          />
-        </div>
+            {/* Description */}
+            {product.description && (
+              <p className={cn(
+                "text-sm line-clamp-2",
+                isLight ? "text-neutral-500" : "text-white/60"
+              )}>
+                {product.description.replace(/<[^>]*>/g, '').slice(0, 80)}...
+              </p>
+            )}
+
+            {/* Rating */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={cn(
+                      'w-4 h-4',
+                      i < rating
+                        ? 'fill-gold-400 text-gold-400'
+                        : isLight ? 'text-neutral-200' : 'text-white/20'
+                    )}
+                  />
+                ))}
+              </div>
+              <span className={cn(
+                "text-sm",
+                isLight ? "text-neutral-400" : "text-white/50"
+              )}>({reviewCount} ביקורות)</span>
+            </div>
+
+            {/* Price and Add to Cart */}
+            <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center gap-2">
+                <span className={cn(
+                  "text-2xl font-bold",
+                  isLight ? "text-neutral-900" : "text-white"
+                )}>{priceDisplay}</span>
+                {productWithPrice.salePrice && productWithPrice.basePrice && productWithPrice.basePrice > productWithPrice.salePrice && (
+                  <span className={cn(
+                    "text-sm line-through",
+                    isLight ? "text-neutral-400" : "text-white/50"
+                  )}>
+                    {formatPrice(productWithPrice.basePrice)}
+                  </span>
+                )}
+              </div>
+
+              {!hasVariants && !stockInfo?.outOfStock && (
+                <Button
+                  size="sm"
+                  onClick={handleAddToCart}
+                  disabled={isLoading}
+                  className="rounded-full px-5 py-2 text-sm font-medium bg-black hover:bg-black/80 text-gold-400 shadow-lg border border-gold-500/30"
+                >
+                  <ShoppingBag className="h-4 w-4 me-1.5" />
+                  הוסף
+                </Button>
+              )}
+
+              {hasVariants && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className={cn(
+                    "rounded-full px-5 py-2 text-sm font-medium border-gold-500/30 hover:border-gold-500 hover:bg-gold-500/10",
+                    isLight ? "text-neutral-700" : "text-white"
+                  )}
+                >
+                  בחר אפשרות
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </Link>
     </motion.div>
   );
