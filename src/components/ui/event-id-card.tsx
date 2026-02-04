@@ -1,7 +1,7 @@
 "use client";
 import * as THREE from "three";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { Canvas, extend, useThree, useFrame } from "@react-three/fiber";
+import { Canvas, extend, useThree, useFrame, Object3DNode } from "@react-three/fiber";
 import {
   Text,
   Environment,
@@ -20,6 +20,14 @@ import {
 import { MeshLineGeometry, MeshLineMaterial } from "meshline";
 
 extend({ MeshLineGeometry, MeshLineMaterial });
+
+// Declare types for meshline JSX elements
+declare module "@react-three/fiber" {
+  interface ThreeElements {
+    meshLineGeometry: Object3DNode<MeshLineGeometry, typeof MeshLineGeometry>;
+    meshLineMaterial: Object3DNode<MeshLineMaterial, typeof MeshLineMaterial>;
+  }
+}
 
 // Preload the band texture
 useTexture.preload(
@@ -268,7 +276,7 @@ function Band({ maxSpeed = 50, minSpeed = 10 }) {
   useRopeJoint(j2, j3, [[0, 0, 0], [0, 0, 0], 0.7]);
   useSphericalJoint(j3, card, [
     [0, 0, 0],
-    [0, 1.2, 0],
+    [0, 1.29, 0],
   ]);
 
   useEffect(() => {
