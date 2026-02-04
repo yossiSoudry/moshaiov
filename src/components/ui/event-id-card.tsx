@@ -63,7 +63,7 @@ export default function EventIdcard() {
           <Environment background={false} blur={0.75}>
             <Lightformer
               intensity={2}
-              color="#d4af37"
+              color="#b8942e"
               position={[0, -1, 5]}
               rotation={[0, 0, Math.PI / 3]}
               scale={[100, 0.1, 1]}
@@ -77,7 +77,7 @@ export default function EventIdcard() {
             />
             <Lightformer
               intensity={3}
-              color="#d4af37"
+              color="#b8942e"
               position={[1, 1, 1]}
               rotation={[0, 0, Math.PI / 3]}
               scale={[100, 0.1, 1]}
@@ -124,25 +124,25 @@ function MoshayovCard() {
       {/* Gold border - top */}
       <mesh position={[0, 1.05, 0.026]}>
         <boxGeometry args={[1.5, 0.02, 0.01]} />
-        <meshStandardMaterial color="#d4af37" metalness={0.9} roughness={0.2} />
+        <meshStandardMaterial color="#b8942e" metalness={0.9} roughness={0.2} />
       </mesh>
 
       {/* Gold border - bottom */}
       <mesh position={[0, -1.05, 0.026]}>
         <boxGeometry args={[1.5, 0.02, 0.01]} />
-        <meshStandardMaterial color="#d4af37" metalness={0.9} roughness={0.2} />
+        <meshStandardMaterial color="#b8942e" metalness={0.9} roughness={0.2} />
       </mesh>
 
       {/* Gold border - left */}
       <mesh position={[-0.75, 0, 0.026]}>
         <boxGeometry args={[0.02, 2.1, 0.01]} />
-        <meshStandardMaterial color="#d4af37" metalness={0.9} roughness={0.2} />
+        <meshStandardMaterial color="#b8942e" metalness={0.9} roughness={0.2} />
       </mesh>
 
       {/* Gold border - right */}
       <mesh position={[0.75, 0, 0.026]}>
         <boxGeometry args={[0.02, 2.1, 0.01]} />
-        <meshStandardMaterial color="#d4af37" metalness={0.9} roughness={0.2} />
+        <meshStandardMaterial color="#b8942e" metalness={0.9} roughness={0.2} />
       </mesh>
 
       {/* Diamond icon at top - stylized M shape */}
@@ -151,7 +151,7 @@ function MoshayovCard() {
         <mesh rotation={[0, 0, Math.PI / 4]}>
           <planeGeometry args={[0.2, 0.2]} />
           <meshStandardMaterial
-            color="#d4af37"
+            color="#b8942e"
             metalness={0.9}
             roughness={0.1}
             side={THREE.DoubleSide}
@@ -184,7 +184,7 @@ function MoshayovCard() {
       {/* Decorative line under text */}
       <mesh position={[0, -0.05, 0.027]}>
         <boxGeometry args={[0.8, 0.008, 0.005]} />
-        <meshStandardMaterial color="#d4af37" metalness={0.9} roughness={0.2} />
+        <meshStandardMaterial color="#b8942e" metalness={0.9} roughness={0.2} />
       </mesh>
 
       {/* Hebrew tagline */}
@@ -203,7 +203,7 @@ function MoshayovCard() {
         {/* Clip base */}
         <RoundedBox args={[0.35, 0.12, 0.06]} radius={0.02} smoothness={4}>
           <meshStandardMaterial
-            color="#d4af37"
+            color="#b8942e"
             metalness={0.95}
             roughness={0.15}
           />
@@ -212,7 +212,7 @@ function MoshayovCard() {
         <mesh position={[0, 0.1, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[0.06, 0.015, 8, 16]} />
           <meshStandardMaterial
-            color="#d4af37"
+            color="#b8942e"
             metalness={0.95}
             roughness={0.15}
           />

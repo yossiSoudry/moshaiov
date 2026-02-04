@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { HoverBorderGradient } from '@/components/ui/hover-border-gradient';
 
 const EventIdcard = dynamic(() => import('@/components/ui/event-id-card'), {
   ssr: false,
@@ -26,38 +26,31 @@ export function HeroSection() {
       >
         <div className="container mx-auto px-4">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button
-              size="lg"
-              asChild
-              className="group relative overflow-hidden bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-primary border-0 px-8 py-5 text-base font-semibold rounded-full shadow-gold-lg transition-all duration-500"
+            {/* Primary CTA - Gold themed */}
+            <HoverBorderGradient
+              containerClassName="rounded-full"
+              as={Link}
+              href="/products"
+              className="flex items-center gap-2 bg-black px-6 py-2 text-base font-semibold text-gold-400"
             >
-              <Link href="/products">
-                <span className="relative z-10 flex items-center gap-2">
-                  גלו את הקולקציה
-                  <motion.span
-                    animate={{ x: [0, -4, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </motion.span>
-                </span>
-                <div className="absolute inset-0 overflow-hidden rounded-full">
-                  <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/30 to-transparent group-hover:translate-x-[100%] transition-transform duration-1000" />
-                </div>
-              </Link>
-            </Button>
+              גלו את הקולקציה
+              <motion.span
+                animate={{ x: [0, -4, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </motion.span>
+            </HoverBorderGradient>
 
-            <Button
-              size="lg"
-              variant="outline"
-              asChild
-              className="relative overflow-hidden border border-white/20 text-white hover:border-gold-400/50 hover:text-gold-400 bg-transparent px-8 py-5 text-base font-medium rounded-full transition-all duration-500 group"
+            {/* Secondary CTA */}
+            <HoverBorderGradient
+              containerClassName="rounded-full"
+              as={Link}
+              href="/about"
+              className="bg-black px-6 py-2 text-base font-medium text-white/90"
             >
-              <Link href="/about">
-                <span className="relative z-10">הסיפור שלנו</span>
-                <div className="absolute inset-0 bg-gold-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full" />
-              </Link>
-            </Button>
+              הסיפור שלנו
+            </HoverBorderGradient>
           </div>
         </div>
       </motion.div>

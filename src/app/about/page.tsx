@@ -4,7 +4,7 @@ import { motion, useInView } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Award, Gem, Shield, Heart, Diamond, Sparkles, ArrowLeft, Star } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { HoverBorderGradient } from '@/components/ui/hover-border-gradient';
 import { useRef } from 'react';
 
 const values = [
@@ -52,17 +52,19 @@ export default function AboutPage() {
   const timelineInView = useInView(timelineRef, { once: true, margin: "-100px" });
 
   return (
-    <div className="overflow-hidden pt-16 lg:pt-20">
+    <div className="overflow-hidden">
       {/* Hero Section */}
-      <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
-        {/* Background Image */}
-        <Image
-          src="https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=1920&h=800&fit=crop"
-          alt="מושיוב תכשיטים"
-          fill
-          className="object-cover"
-          priority
-        />
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* Background Video */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src="/Cinematic_close_up_shot_of_an.mp4" type="video/mp4" />
+        </video>
 
         {/* Gradient overlays */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
@@ -410,24 +412,29 @@ export default function AboutPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button
-                size="lg"
-                asChild
-                className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-primary font-semibold px-10 py-6 text-lg rounded-full shadow-lg"
+              <HoverBorderGradient
+                containerClassName="rounded-full"
+                as={Link}
+                href="/contact"
+                className="flex items-center gap-2 bg-black px-6 py-2 text-base font-semibold text-gold-500"
               >
-                <Link href="/contact" className="flex items-center gap-3">
-                  צור קשר
-                  <ArrowLeft className="h-5 w-5" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-2 border-primary-foreground/20 text-primary-foreground hover:border-gold-400/50 hover:bg-gold-500/5 px-10 py-6 text-lg rounded-full"
-                asChild
+                צור קשר
+                <motion.span
+                  animate={{ x: [0, -4, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </motion.span>
+              </HoverBorderGradient>
+
+              <HoverBorderGradient
+                containerClassName="rounded-full"
+                as={Link}
+                href="/products"
+                className="bg-black px-6 py-2 text-base font-medium text-white/90"
               >
-                <Link href="/products">לקולקציה</Link>
-              </Button>
+                לקולקציה
+              </HoverBorderGradient>
             </div>
           </motion.div>
         </div>

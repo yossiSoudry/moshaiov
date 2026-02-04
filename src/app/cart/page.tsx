@@ -49,7 +49,9 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 pt-20">
+        {/* Dark header background for navbar */}
+        <div className="absolute inset-x-0 top-0 h-20 bg-black z-40" />
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -75,8 +77,11 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen">
+      {/* Dark header background for navbar */}
+      <div className="absolute inset-x-0 top-0 h-20 bg-black z-40" />
+
       {/* Breadcrumb */}
-      <div className="bg-muted py-4">
+      <div className="bg-muted py-4 pt-24">
         <div className="container mx-auto px-4">
           <nav className="flex items-center gap-2 text-sm">
             <Link href="/" className="text-muted-foreground hover:text-foreground">

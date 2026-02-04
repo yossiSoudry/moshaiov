@@ -89,9 +89,9 @@ export function MobileMenu({ isOpen, onClose, navLinks }: MobileMenuProps) {
                   >
                     <defs>
                       <linearGradient id="mobileMenuDiamondGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#d4af37" />
-                        <stop offset="50%" stopColor="#f5e6c8" />
-                        <stop offset="100%" stopColor="#d4af37" />
+                        <stop offset="0%" stopColor="#b8942e" />
+                        <stop offset="50%" stopColor="#e8d9a8" />
+                        <stop offset="100%" stopColor="#b8942e" />
                       </linearGradient>
                     </defs>
                     <path

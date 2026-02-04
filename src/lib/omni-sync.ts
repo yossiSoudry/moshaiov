@@ -2,7 +2,7 @@ import { OmniSyncClient } from 'omni-sync-sdk';
 
 export const omni = new OmniSyncClient({
   connectionId: 'vc_tYZpo6sTEQL6y8aWRltQj',
-  baseUrl: 'http://localhost:4000',
+  baseUrl: 'https://api.brainerce.com',
 });
 
 // Cart helpers - save cart ID to localStorage

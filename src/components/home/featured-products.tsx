@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion, useInView } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ArrowLeft, Sparkles, RefreshCw } from 'lucide-react';
-import { omni } from '@/lib/omni-sync';
 import { ProductCard } from '@/components/products/product-card';
 import { Button } from '@/components/ui/button';
 import type { Product } from 'omni-sync-sdk';
@@ -20,7 +19,6 @@ function ProductSkeleton({ index }: { index: number }) {
     >
       <div className="relative aspect-square rounded-2xl overflow-hidden bg-muted">
         <div className="absolute inset-0 animate-shimmer" />
-        {/* Decorative shimmer overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
       </div>
       <div className="space-y-2 px-1">
@@ -36,14 +34,14 @@ export function FeaturedProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(containerRef, { once: true, margin: "-50px" });
 
   useEffect(() => {
     async function fetchProducts() {
       try {
-        const response = await omni.getProducts({ limit: 8 });
-        setProducts(response.data);
+        const response = await fetch('/api/products?limit=8');
+        if (!response.ok) throw new Error('Failed to fetch products');
+        const data = await response.json();
+        setProducts(data.data || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'שגיאה בטעינת המוצרים');
       } finally {
@@ -104,16 +102,23 @@ export function FeaturedProducts() {
   }
 
   return (
-    <div ref={containerRef} className="space-y-12">
+    <div className="space-y-12">
       {/* Products grid */}
       <motion.div
         className="grid grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-8"
         initial={{ opacity: 0 }}
-        animate={isInView ? { opacity: 1 } : {}}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
         {products.map((product, index) => (
-          <ProductCard key={product.id} product={product} index={index} />
+          <motion.div
+            key={product.id}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <ProductCard product={product} index={index} variant="light" />
+          </motion.div>
         ))}
       </motion.div>
 
@@ -121,7 +126,7 @@ export function FeaturedProducts() {
       <motion.div
         className="text-center"
         initial={{ opacity: 0, y: 20 }}
-        animate={isInView ? { opacity: 1, y: 0 } : {}}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.5 }}
       >
         <Button

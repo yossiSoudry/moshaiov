@@ -115,9 +115,9 @@ export function Footer() {
                   >
                     <defs>
                       <linearGradient id="footerDiamondGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#d4af37" />
-                        <stop offset="50%" stopColor="#f5e6c8" />
-                        <stop offset="100%" stopColor="#d4af37" />
+                        <stop offset="0%" stopColor="#b8942e" />
+                        <stop offset="50%" stopColor="#e8d9a8" />
+                        <stop offset="100%" stopColor="#b8942e" />
                       </linearGradient>
                     </defs>
                     <path
@@ -255,7 +255,7 @@ export function Footer() {
                 <input
                   type="email"
                   placeholder="כתובת אימייל"
-                  className="flex-1 px-4 py-2 bg-primary-foreground/10 border border-primary-foreground/20 rounded-lg text-sm placeholder:text-primary-foreground/40 focus:outline-none focus:border-gold-500/50 transition-colors"
+                  className="flex-1 px-4 py-2 bg-primary-foreground/10 border border-primary-foreground/20 rounded-xl! text-sm placeholder:text-primary-foreground/40 focus:outline-none focus:shadow-[0_0_0_2px_rgba(184,148,46,0.5)] transition-colors"
                 />
                 <motion.button
                   className="px-4 py-2 bg-gradient-to-r from-gold-500 to-gold-600 text-primary font-medium text-sm rounded-lg hover:from-gold-400 hover:to-gold-500 transition-all"

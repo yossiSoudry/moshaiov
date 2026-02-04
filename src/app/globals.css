@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 /* ============================================
    MOSHAYOV - Luxury Jewelry Design System
    Premium Black, White, Gold & Silver Palette
@@ -7,32 +9,30 @@
 
 :root {
   /* Primary Colors - Luxury Black & White */
-  --background: #fafafa;
-  --foreground: #0a0a0a;
-  --card: #ffffff;
-  --card-foreground: #0a0a0a;
-  --popover: #ffffff;
-  --popover-foreground: #0a0a0a;
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
 
   /* Muted Colors */
-  --muted: #f5f5f5;
-  --muted-foreground: #6b6b6b;
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
 
   /* Accent - Luxurious Gold */
-  --accent: #d4af37;
-  --accent-foreground: #0a0a0a;
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
 
-  /* Gold variations */
-  --gold-50: #fefdf8;
-  --gold-100: #fdf9e7;
-  --gold-200: #f9efc4;
-  --gold-300: #f5e29c;
-  --gold-400: #e8c859;
-  --gold-500: #d4af37;
-  --gold-600: #b8942e;
-  --gold-700: #967528;
-  --gold-800: #7a5d25;
-  --gold-900: #654d22;
+  /* Gold variations - Rich, warm gold tones */
+  --gold-50: #faf6eb;
+  --gold-100: #f5edd6;
+  --gold-200: #e8d9a8;
+  --gold-300: #d4bc6a;
+  --gold-400: #c9a227;
+  --gold-500: #b8942e;
+  --gold-600: #a07d24;
+  --gold-700: #86681f;
+  --gold-800: #6d541c;
+  --gold-900: #5a4519;
 
   /* Silver variations */
   --silver-50: #fafafa;
@@ -47,20 +47,20 @@
   --silver-900: #1a1a1a;
 
   /* Primary */
-  --primary: #0a0a0a;
-  --primary-foreground: #ffffff;
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
 
   /* Secondary */
-  --secondary: #f5f5f5;
-  --secondary-foreground: #0a0a0a;
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
 
   /* Borders */
-  --border: #e5e5e5;
-  --input: #e5e5e5;
-  --ring: #d4af37;
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
 
   /* Semantic Colors */
-  --destructive: #dc2626;
+  --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: #ffffff;
   --success: #16a34a;
   --success-foreground: #ffffff;
@@ -68,7 +68,22 @@
   --warning-foreground: #ffffff;
 
   /* Radius */
-  --radius: 0.5rem;
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
 @theme inline {
@@ -94,18 +109,18 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
 
-  /* Gold palette */
-  --color-gold: #d4af37;
-  --color-gold-50: #fefdf8;
-  --color-gold-100: #fdf9e7;
-  --color-gold-200: #f9efc4;
-  --color-gold-300: #f5e29c;
-  --color-gold-400: #e8c859;
-  --color-gold-500: #d4af37;
-  --color-gold-600: #b8942e;
-  --color-gold-700: #967528;
-  --color-gold-800: #7a5d25;
-  --color-gold-light: #f5e6c8;
+  /* Gold palette - Rich, warm gold tones */
+  --color-gold: #b8942e;
+  --color-gold-50: #faf6eb;
+  --color-gold-100: #f5edd6;
+  --color-gold-200: #e8d9a8;
+  --color-gold-300: #d4bc6a;
+  --color-gold-400: #c9a227;
+  --color-gold-500: #b8942e;
+  --color-gold-600: #a07d24;
+  --color-gold-700: #86681f;
+  --color-gold-800: #6d541c;
+  --color-gold-light: #e8d9a8;
 
   /* Silver palette */
   --color-silver: #a3a3a3;
@@ -131,6 +146,21 @@
   --duration-normal: 300ms;
   --duration-slow: 500ms;
   --duration-slower: 800ms;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
 }
 
 /* ============================================
@@ -144,8 +174,6 @@ html {
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
   font-family: 'Heebo', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -554,11 +582,11 @@ body {
 .gold-shimmer-text {
   background: linear-gradient(
     120deg,
-    #d4af37 0%,
-    #f5e6c8 25%,
-    #d4af37 50%,
-    #f5e6c8 75%,
-    #d4af37 100%
+    #b8942e 0%,
+    #e8d9a8 25%,
+    #c9a227 50%,
+    #e8d9a8 75%,
+    #b8942e 100%
   );
   background-size: 500% 100%;
   -webkit-background-clip: text;
@@ -1108,4 +1136,47 @@ body {
   40% { content: '.'; }
   60% { content: '..'; }
   80%, 100% { content: '...'; }
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }

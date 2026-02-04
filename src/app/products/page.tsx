@@ -1,30 +1,30 @@
 'use client';
 
-import { Suspense, useEffect, useState, useCallback, useRef } from 'react';
+import { Suspense, useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Filter,
-  SlidersHorizontal,
   Grid3X3,
   LayoutGrid,
+  Columns2,
   Loader2,
   Search,
   Diamond,
   Sparkles,
   X,
-  ChevronDown,
-  ArrowUpDown
 } from 'lucide-react';
-import { omni } from '@/lib/omni-sync';
 import { cn } from '@/lib/utils';
 import { ProductCard } from '@/components/products/product-card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Product } from 'omni-sync-sdk';
-
-const PRODUCTS_PER_PAGE = 50;
 
 // Category slug to Hebrew name mapping
 const CATEGORY_MAP: Record<string, string> = {
@@ -41,107 +41,59 @@ function ProductsContent() {
   const initialSearch = searchParams.get('search') || '';
   const initialCategory = searchParams.get('category') || '';
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState(initialSearch);
   const [category, setCategory] = useState(initialCategory);
   const [sortBy, setSortBy] = useState('newest');
   const [gridCols, setGridCols] = useState<2 | 3 | 4>(3);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Update category when URL changes
+
+  // Load all products once on mount
   useEffect(() => {
-    setCategory(initialCategory);
-  }, [initialCategory]);
-
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
-  const fetchProducts = useCallback(async (pageNum: number, isNewSearch: boolean = false) => {
-    try {
-      if (isNewSearch) {
+    async function fetchAllProducts() {
+      try {
         setIsLoading(true);
-      } else {
-        setIsLoadingMore(true);
+        const res = await fetch(`/api/products?limit=1000`);
+        if (!res.ok) throw new Error('Failed to fetch products');
+        const response = await res.json();
+        setAllProducts(response.data || []);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'שגיאה בטעינת המוצרים');
+      } finally {
+        setIsLoading(false);
       }
-
-      const response = await omni.getProducts({
-        page: pageNum,
-        limit: PRODUCTS_PER_PAGE,
-        search: search || undefined,
-      });
-
-      if (isNewSearch) {
-        setProducts(response.data);
-      } else {
-        setProducts((prev) => [...prev, ...response.data]);
-      }
-
-      setTotalPages(response.meta.totalPages);
-      setPage(pageNum);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'שגיאה בטעינת המוצרים');
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
     }
-  }, [search]);
+    fetchAllProducts();
+  }, []);
 
-  // Initial load
-  useEffect(() => {
-    fetchProducts(1, true);
-  }, [search]);
-
-  // Infinite scroll observer
-  useEffect(() => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (
-          entries[0].isIntersecting &&
-          !isLoading &&
-          !isLoadingMore &&
-          page < totalPages
-        ) {
-          fetchProducts(page + 1, false);
-        }
-      },
-      { rootMargin: '200px' }
-    );
-
-    if (loadMoreRef.current) {
-      observerRef.current.observe(loadMoreRef.current);
-    }
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, [isLoading, isLoadingMore, page, totalPages, fetchProducts]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    const searchValue = formData.get('search') as string;
-    setSearch(searchValue);
+  const handleSearchInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
   };
 
   const clearSearch = () => {
     setSearch('');
+    if (searchInputRef.current) {
+      searchInputRef.current.value = '';
+    }
   };
 
-  // Filter by category
+  // Filter by search (client-side)
+  const searchFilteredProducts = search
+    ? allProducts.filter((product) => {
+        const searchLower = search.toLowerCase();
+        const nameMatch = product.name?.toLowerCase().includes(searchLower);
+        const descMatch = (product as unknown as { description?: string }).description?.toLowerCase().includes(searchLower);
+        return nameMatch || descMatch;
+      })
+    : allProducts;
+
+  // Filter by category (client-side)
   const filteredProducts = category
-    ? products.filter((product) => {
+    ? searchFilteredProducts.filter((product) => {
         const productCategories = product.categories as unknown as { name?: string; slug?: string }[] | undefined;
         if (!productCategories) return false;
         const categoryName = CATEGORY_MAP[category];
@@ -149,7 +101,7 @@ function ProductsContent() {
           (cat) => cat.name === categoryName || cat.slug === category
         );
       })
-    : products;
+    : searchFilteredProducts;
 
   // Sort products
   const sortedProducts = [...filteredProducts].sort((a, b) => {
@@ -170,225 +122,133 @@ function ProductsContent() {
   });
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-neutral-950">
       {/* Hero Header */}
-      <div className="relative bg-gradient-to-b from-muted via-muted/80 to-background pt-24 lg:pt-32 pb-16 lg:pb-24 overflow-hidden">
-        {/* Background decorations */}
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Gradient orbs */}
-          <div className="absolute top-0 right-1/4 w-96 h-96 bg-gold-500/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-gold-400/5 rounded-full blur-3xl" />
-
-          {/* Floating diamonds */}
-          {[
-            { top: '25%', left: '15%' },
-            { top: '40%', left: '75%' },
-            { top: '60%', left: '25%' },
-            { top: '35%', left: '85%' },
-            { top: '70%', left: '45%' },
-            { top: '50%', left: '65%' },
-          ].map((pos, i) => (
-            <motion.div
-              key={i}
-              className="absolute"
-              style={pos}
-              animate={{
-                y: [0, -20, 0],
-                rotate: [0, 180, 360],
-                opacity: [0.3, 0.6, 0.3],
-              }}
-              transition={{
-                duration: 4 + i * 0.5,
-                repeat: Infinity,
-                delay: i * 0.3,
-              }}
-            >
-              <Diamond className="h-4 w-4 text-gold-500/30" />
-            </motion.div>
-          ))}
-        </div>
-
+      <div className="relative pt-28 lg:pt-36 pb-12 lg:pb-16 overflow-hidden">
         <div className="container mx-auto px-4 relative">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-center max-w-3xl mx-auto"
           >
-            {/* Decorative line */}
-            <motion.div
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: 1, delay: 0.3 }}
-              className="flex items-center justify-center gap-4 mb-6"
-            >
-              <div className="h-px w-16 bg-gradient-to-r from-transparent to-gold-500/50" />
-              <Sparkles className="h-5 w-5 text-gold-500" />
-              <div className="h-px w-16 bg-gradient-to-l from-transparent to-gold-500/50" />
-            </motion.div>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-4xl lg:text-5xl xl:text-6xl font-bold mb-6"
-            >
+            <p className="text-white/60 text-sm font-medium mb-2">קולקציית תכשיטים</p>
+            <h1 className="text-white text-3xl lg:text-4xl font-bold mb-8">
               {category && CATEGORY_MAP[category] ? (
-                <>
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-500 to-gold-400">
-                    {CATEGORY_MAP[category]}
-                  </span>
-                </>
+                CATEGORY_MAP[category]
               ) : (
-                <>
-                  <span className="relative inline-block">
-                    <span className="relative z-10">הקולקציה</span>
-                    <motion.span
-                      className="absolute -inset-2 bg-gold-500/10 blur-xl rounded-full"
-                      animate={{ opacity: [0.5, 0.8, 0.5] }}
-                      transition={{ duration: 3, repeat: Infinity }}
-                    />
-                  </span>{' '}
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-500 to-gold-400">
-                    שלנו
-                  </span>
-                </>
+                'תכשיטי הזהב והיהלומים שלנו'
               )}
-            </motion.h1>
+            </h1>
 
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto"
-            >
-              גלו את מגוון תכשיטי הזהב והיהלומים היוקרתיים שלנו,
-              מעוצבים בקפידה ועשויים מחומרים איכותיים במיוחד
-            </motion.p>
-
-            {/* Stats */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              className="flex items-center justify-center gap-8 mt-8"
-            >
-              {[
-                { label: 'מוצרים', value: products.length || '100+' },
-                { label: 'קטגוריות', value: '12' },
-                { label: 'שנות ניסיון', value: '40+' },
-              ].map((stat, index) => (
-                <div key={index} className="text-center">
-                  <p className="text-2xl lg:text-3xl font-bold text-gold-500">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                </div>
-              ))}
-            </motion.div>
-          </motion.div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8 lg:py-12">
-        {/* Toolbar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="relative bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-4 lg:p-6 mb-8 lg:mb-12"
-        >
-          {/* Background glow */}
-          <div className="absolute inset-0 bg-gradient-to-r from-gold-500/5 via-transparent to-gold-500/5 rounded-2xl pointer-events-none" />
-
-          <div className="relative flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-            {/* Search */}
-            <form onSubmit={handleSearch} className="w-full lg:w-auto">
-              <div className="relative group">
-                <motion.div
+            {/* Category Tabs */}
+            <div className="flex items-center gap-4 lg:gap-6 mb-8 overflow-x-auto pb-2">
+              <Button
+                variant={!category ? 'default' : 'ghost'}
+                className={cn(
+                  "px-6 py-2 rounded-full text-sm font-medium whitespace-nowrap",
+                  !category ? "bg-white text-black hover:bg-white/90" : "text-white/80 hover:text-white hover:bg-white/10"
+                )}
+                onClick={() => setCategory('')}
+              >
+                הכל
+              </Button>
+              {Object.entries(CATEGORY_MAP).slice(0, 5).map(([slug, name]) => (
+                <Button
+                  key={slug}
+                  variant={category === slug ? 'default' : 'ghost'}
                   className={cn(
-                    'absolute -inset-0.5 bg-gradient-to-r from-gold-500/50 to-gold-400/50 rounded-xl blur-sm opacity-0 transition-opacity duration-300',
-                    isSearchFocused && 'opacity-100'
+                    "text-sm font-medium whitespace-nowrap",
+                    category === slug ? "bg-white text-black hover:bg-white/90" : "text-white/80 hover:text-white hover:bg-white/10"
                   )}
-                />
-                <div className="relative flex items-center">
-                  <Input
+                  onClick={() => setCategory(slug)}
+                >
+                  {name}
+                </Button>
+              ))}
+            </div>
+
+            {/* Filters Row */}
+            <div className="flex flex-wrap items-center gap-4">
+              <Select value={category || 'all'} onValueChange={(val) => {
+                setCategory(val === 'all' ? '' : val);
+              }}>
+                <SelectTrigger className="w-48 rounded-full bg-white/10 border-white/20 text-white">
+                  <SelectValue placeholder="בחר קטגוריה" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">כל הקטגוריות</SelectItem>
+                  {Object.entries(CATEGORY_MAP).map(([slug, name]) => (
+                    <SelectItem key={slug} value={slug}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-48 rounded-full bg-white/10 border-white/20 text-white">
+                  <SelectValue placeholder="מיין לפי" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">חדש ביותר</SelectItem>
+                  <SelectItem value="price-asc">מחיר: נמוך לגבוה</SelectItem>
+                  <SelectItem value="price-desc">מחיר: גבוה לנמוך</SelectItem>
+                  <SelectItem value="name">לפי שם</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Search Input - Real-time filtering */}
+              <div className="relative flex-1 lg:flex-none lg:mr-auto">
+                <div className="relative">
+                  <input
+                    ref={searchInputRef}
                     type="search"
                     name="search"
-                    placeholder="חיפוש מוצרים..."
-                    defaultValue={search}
-                    onFocus={() => setIsSearchFocused(true)}
-                    onBlur={() => setIsSearchFocused(false)}
-                    className="w-full lg:w-96 pe-10 ps-12 h-12 bg-background/80 border-border/50 rounded-xl focus:border-gold-500/50 transition-all duration-300"
+                    placeholder="חיפוש..."
+                    value={search}
+                    onChange={handleSearchInput}
+                    className="w-full lg:w-64 h-10 pe-10 ps-10 rounded-full! border border-white/20 bg-white/10 text-white text-sm placeholder:text-white/50 focus:outline-none focus:shadow-[0_0_0_2px_rgba(184,148,46,0.5)] transition-colors"
                   />
-                  <Search className="absolute right-4 h-5 w-5 text-muted-foreground" />
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
                   {search && (
-                    <motion.button
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
+                    <button
                       type="button"
                       onClick={clearSearch}
-                      className="absolute left-4 p-1 rounded-full hover:bg-muted transition-colors"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
                     >
-                      <X className="h-4 w-4 text-muted-foreground" />
-                    </motion.button>
+                      <X className="w-4 h-4" />
+                    </button>
                   )}
                 </div>
               </div>
-            </form>
 
-            {/* Controls */}
-            <div className="flex items-center gap-3 w-full lg:w-auto">
-              {/* Sort */}
-              <div className="relative flex-1 lg:flex-none">
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full lg:w-auto h-12 pe-4 ps-10 rounded-xl border border-border/50 bg-background/80 text-sm appearance-none cursor-pointer hover:border-gold-500/50 transition-colors focus:outline-none focus:border-gold-500/50"
-                >
-                  <option value="newest">חדש ביותר</option>
-                  <option value="price-asc">מחיר: נמוך לגבוה</option>
-                  <option value="price-desc">מחיר: גבוה לנמוך</option>
-                  <option value="name">לפי שם</option>
-                </select>
-                <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              </div>
-
-              {/* Grid toggle */}
-              <div className="hidden lg:flex items-center gap-1 p-1.5 border border-border/50 rounded-xl bg-background/80">
+              {/* Grid toggle - Desktop */}
+              <div className="hidden lg:flex items-center gap-1 p-1 border border-white/20 rounded-full bg-white/10">
                 {[
-                  { cols: 2 as const, icon: Grid3X3 },
+                  { cols: 4 as const, icon: Grid3X3 },
                   { cols: 3 as const, icon: LayoutGrid },
-                  { cols: 4 as const, icon: SlidersHorizontal },
+                  { cols: 2 as const, icon: Columns2 },
                 ].map(({ cols, icon: Icon }) => (
                   <motion.button
                     key={cols}
                     onClick={() => setGridCols(cols)}
                     className={cn(
-                      'relative p-2.5 rounded-lg transition-colors',
+                      'relative p-2 rounded-full transition-colors',
                       gridCols === cols
-                        ? 'text-gold-500'
-                        : 'text-muted-foreground hover:text-foreground'
+                        ? 'text-gold-400 bg-gold-500/20'
+                        : 'text-white/60 hover:text-white'
                     )}
-                    whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     aria-label={`${cols} עמודות`}
                   >
-                    {gridCols === cols && (
-                      <motion.div
-                        layoutId="gridIndicator"
-                        className="absolute inset-0 bg-gold-500/10 border border-gold-500/30 rounded-lg"
-                        transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                      />
-                    )}
-                    <Icon className="h-4 w-4 relative z-10" />
+                    <Icon className="h-4 w-4" />
                   </motion.button>
                 ))}
               </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8 lg:py-12">
 
         {/* Active filters indicator */}
         <AnimatePresence>
@@ -399,17 +259,17 @@ function ProductsContent() {
               exit={{ opacity: 0, y: -10 }}
               className="flex flex-wrap items-center gap-3 mb-6"
             >
-              <span className="text-sm text-muted-foreground">מסננים:</span>
+              <span className="text-sm text-white/60">מסננים:</span>
 
               {category && CATEGORY_MAP[category] && (
-                <a
-                  href="/products"
+                <button
+                  onClick={() => setCategory('')}
                   className="inline-flex items-center gap-2 px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 rounded-full text-sm font-medium hover:bg-gold-500/20 transition-colors"
                 >
                   <Diamond className="h-3 w-3 text-gold-500" />
                   {CATEGORY_MAP[category]}
                   <X className="h-3 w-3" />
-                </a>
+                </button>
               )}
 
               {search && (
@@ -436,8 +296,8 @@ function ProductsContent() {
             className="flex items-center gap-2 mb-8"
           >
             <Diamond className="h-4 w-4 text-gold-500" />
-            <p className="text-sm text-muted-foreground">
-              מציג <span className="font-semibold text-foreground">{sortedProducts.length}</span> מוצרים
+            <p className="text-sm text-white/60">
+              מציג <span className="font-semibold text-white">{sortedProducts.length}</span> מוצרים
               {category && CATEGORY_MAP[category] && (
                 <span> בקטגוריית {CATEGORY_MAP[category]}</span>
               )}
@@ -462,7 +322,7 @@ function ProductsContent() {
               </div>
               <p className="text-destructive text-lg mb-6">{error}</p>
               <Button
-                onClick={() => fetchProducts(1, true)}
+                onClick={() => window.location.reload()}
                 className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-primary"
               >
                 <Sparkles className="h-4 w-4 me-2" />
@@ -521,13 +381,13 @@ function ProductsContent() {
                     animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
                     transition={{ duration: 3, repeat: Infinity }}
                   />
-                  <div className="relative w-32 h-32 rounded-3xl bg-gradient-to-br from-muted to-muted/50 border border-border/50 flex items-center justify-center">
-                    <Search className="h-14 w-14 text-muted-foreground/30" />
+                  <div className="relative w-32 h-32 rounded-3xl bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/10 flex items-center justify-center">
+                    <Search className="h-14 w-14 text-white/20" />
                   </div>
                 </div>
 
-                <h3 className="text-2xl font-bold mb-3">לא נמצאו מוצרים</h3>
-                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                <h3 className="text-2xl font-bold mb-3 text-white">לא נמצאו מוצרים</h3>
+                <p className="text-white/60 mb-8 max-w-md mx-auto">
                   לא מצאנו מוצרים התואמים לחיפוש שלך. נסו לחפש מילות מפתח אחרות או לעיין בקולקציה המלאה
                 </p>
 
@@ -535,7 +395,7 @@ function ProductsContent() {
                   <Button
                     variant="outline"
                     onClick={clearSearch}
-                    className="border-gold-500/30 hover:border-gold-500 hover:bg-gold-500/5"
+                    className="border-gold-500/30 hover:border-gold-500 hover:bg-gold-500/5 text-white"
                   >
                     <X className="h-4 w-4 me-2" />
                     נקה חיפוש
@@ -560,45 +420,21 @@ function ProductsContent() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{
                       duration: 0.4,
-                      delay: (index % PRODUCTS_PER_PAGE) * 0.03,
+                      delay: Math.min(index * 0.03, 0.5),
                       ease: [0.25, 0.46, 0.45, 0.94]
                     }}
                   >
                     <ProductCard
                       product={product}
-                      index={index % PRODUCTS_PER_PAGE}
+                      index={index}
                     />
                   </motion.div>
                 ))}
               </motion.div>
             )}
 
-            {/* Load more trigger */}
-            <div ref={loadMoreRef} className="h-20 mt-12">
-              <AnimatePresence>
-                {isLoadingMore && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="flex flex-col items-center justify-center gap-3"
-                  >
-                    <div className="relative">
-                      <motion.div
-                        className="absolute inset-0 bg-gold-500/20 rounded-full blur-lg"
-                        animate={{ scale: [1, 1.3, 1] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                      />
-                      <Loader2 className="h-8 w-8 text-gold-500 animate-spin relative" />
-                    </div>
-                    <span className="text-muted-foreground">טוען עוד מוצרים...</span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
             {/* End of results */}
-            {page >= totalPages && products.length > 0 && (
+            {sortedProducts.length > 0 && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -609,8 +445,8 @@ function ProductsContent() {
                   <Diamond className="h-5 w-5 text-gold-500" />
                   <div className="h-px w-20 bg-gradient-to-l from-transparent to-gold-500/30" />
                 </div>
-                <p className="text-muted-foreground">
-                  הגעתם לסוף הקולקציה
+                <p className="text-white/60">
+                  סה״כ {sortedProducts.length} מוצרים
                 </p>
               </motion.div>
             )}
@@ -625,9 +461,9 @@ export default function ProductsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen">
+        <div className="min-h-screen bg-neutral-950">
           {/* Hero skeleton */}
-          <div className="relative bg-gradient-to-b from-muted via-muted/80 to-background py-16 lg:py-24">
+          <div className="relative py-16 lg:py-24">
             <div className="container mx-auto px-4">
               <div className="text-center max-w-3xl mx-auto">
                 <Skeleton className="h-8 w-32 mx-auto mb-6 rounded-full" />

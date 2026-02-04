@@ -415,9 +415,9 @@ export const CategoryCard = ({
       {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300" />
 
-      {/* Shimmer Effect */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 -translate-x-full bg-linear-to-l from-transparent via-white/20 to-transparent group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+      {/* Shimmer Effect - Only animates on hover entry */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 -translate-x-full bg-linear-to-l from-transparent via-white/20 to-transparent group-hover:translate-x-full group-hover:transition-transform group-hover:duration-1000 group-hover:ease-in-out" />
       </div>
 
       {/* Border Glow on Hover */}
