@@ -21,16 +21,6 @@ import { MeshLineGeometry, MeshLineMaterial } from "meshline";
 
 extend({ MeshLineGeometry, MeshLineMaterial });
 
-// Declare types for meshline JSX elements
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      meshLineGeometry: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & { ref?: React.Ref<MeshLineGeometry> };
-      meshLineMaterial: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & Record<string, unknown>;
-    }
-  }
-}
-
 // Preload the band texture
 useTexture.preload(
   "https://assets.vercel.com/image/upload/contentful/image/e5382hct74si/SOT1hmCesOHxEYxL7vkoZ/c57b29c85912047c414311723320c16b/band.jpg"
@@ -381,7 +371,9 @@ function Band({ maxSpeed = 50, minSpeed = 10 }) {
       </group>
       {/* Original styled band */}
       <mesh ref={band}>
+        {/* @ts-expect-error - meshline extends R3F */}
         <meshLineGeometry ref={lineGeometry} />
+        {/* @ts-expect-error - meshline extends R3F */}
         <meshLineMaterial
           color="white"
           lineWidth={0.2}
