@@ -10,8 +10,9 @@ import {
   Facebook,
   Instagram,
   MessageCircle,
-  Diamond,
-  Sparkles,
+  ShoppingBag,
+  FileText,
+  Send,
   ArrowUp,
 } from 'lucide-react';
 
@@ -176,7 +177,7 @@ export function Footer() {
           {/* Shop Links */}
           <div className="lg:col-span-2">
             <h3 className="font-semibold text-lg mb-5 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-gold-400" />
+              <ShoppingBag className="w-4 h-4 text-gold-400" />
               <span>חנות</span>
             </h3>
             <ul className="space-y-3">
@@ -197,7 +198,7 @@ export function Footer() {
           {/* Info Links */}
           <div className="lg:col-span-2">
             <h3 className="font-semibold text-lg mb-5 flex items-center gap-2">
-              <Diamond className="w-4 h-4 text-gold-400" />
+              <FileText className="w-4 h-4 text-gold-400" />
               <span>מידע</span>
             </h3>
             <ul className="space-y-3">
@@ -218,7 +219,7 @@ export function Footer() {
           {/* Contact Info */}
           <div className="lg:col-span-4">
             <h3 className="font-semibold text-lg mb-5 flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-gold-400" />
+              <Send className="w-4 h-4 text-gold-400" />
               <span>צור קשר</span>
             </h3>
             <ul className="space-y-4">

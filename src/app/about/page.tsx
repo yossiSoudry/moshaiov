@@ -3,7 +3,7 @@
 import { motion, useInView } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Award, Gem, Shield, Heart, Diamond, Sparkles, ArrowLeft, Star } from 'lucide-react';
+import { Award, Gem, Shield, Heart, Diamond, Sparkles, ArrowLeft, Star, DoorOpen, Crown } from 'lucide-react';
 import { HoverBorderGradient } from '@/components/ui/hover-border-gradient';
 import { useRef } from 'react';
 
@@ -12,19 +12,19 @@ const values = [
     icon: Gem,
     title: 'איכות ללא פשרות',
     description: 'אנו משתמשים רק בחומרים מהאיכות הגבוהה ביותר - זהב 14K ו-18K, ויהלומים מוסמכים.',
-    gradient: 'from-gold-400 to-gold-600',
+    gradient: 'from-silver-400 to-gold-400',
   },
   {
     icon: Award,
     title: 'מומחיות של דורות',
     description: 'למעלה מ-40 שנות ניסיון בעיצוב ויצירת תכשיטים. הידע עובר מדור לדור.',
-    gradient: 'from-silver-300 to-silver-500',
+    gradient: 'from-silver-400 to-gold-400',
   },
   {
     icon: Shield,
     title: 'אמינות ואחריות',
     description: 'כל תכשיט מגיע עם תעודת אחריות ואותנטיות. אנחנו עומדים מאחורי כל מוצר.',
-    gradient: 'from-gold-300 to-gold-500',
+    gradient: 'from-silver-400 to-gold-400',
   },
   {
     icon: Heart,
@@ -104,7 +104,7 @@ export default function AboutPage() {
             animate={{ opacity: 1, y: 0 }}
             className="inline-flex items-center gap-2 px-5 py-2 bg-gold-500/20 border border-gold-500/30 rounded-full mb-8"
           >
-            <Sparkles className="w-4 h-4 text-gold-400" />
+            <Crown className="w-4 h-4 text-gold-400" />
             <span className="text-sm font-medium text-gold-300">מאז 1985</span>
           </motion.div>
 
@@ -260,18 +260,22 @@ export default function AboutPage() {
       </section>
 
       {/* Values Section */}
-      <section ref={valuesRef} className="py-24 lg:py-32 bg-muted relative overflow-hidden">
+      <section ref={valuesRef} className="py-24 lg:py-32 bg-primary text-primary-foreground relative overflow-hidden">
         {/* Background pattern */}
-        <div className="absolute inset-0 opacity-[0.02]">
+        <div className="absolute inset-0 opacity-[0.03]">
           <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>
               <pattern id="aboutValuesPattern" width="15" height="15" patternUnits="userSpaceOnUse">
                 <path d="M7.5 0 L15 7.5 L7.5 15 L0 7.5 Z" fill="none" stroke="currentColor" strokeWidth="0.3" />
               </pattern>
             </defs>
-            <rect width="100" height="100" fill="url(#aboutValuesPattern)" />
+            <rect width="100" height="100" fill="url(#aboutValuesPattern)" className="text-gold-400" />
           </svg>
         </div>
+
+        {/* Gold accent orbs */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gold-500/5 rounded-full blur-[100px]" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gold-500/5 rounded-full blur-[80px]" />
 
         <div className="container mx-auto px-4 relative">
           {/* Section header */}
@@ -280,19 +284,19 @@ export default function AboutPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={valuesInView ? { opacity: 1, y: 0 } : {}}
           >
-            <div className="inline-flex items-center gap-2 px-5 py-2 bg-background rounded-full border border-gold-500/20 mb-6">
-              <Sparkles className="w-4 h-4 text-gold-500" />
-              <span className="text-sm font-medium text-gold-600">מה מנחה אותנו</span>
+            <div className="inline-flex items-center gap-2 px-5 py-2 bg-gold-500/10 rounded-full border border-gold-500/20 mb-6">
+              <Sparkles className="w-4 h-4 text-gold-400" />
+              <span className="text-sm font-medium text-gold-400">מה מנחה אותנו</span>
             </div>
 
             <h2 className="text-4xl lg:text-5xl font-bold mb-5">
               <span>הערכים </span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-500 to-gold-600">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-gold-500">
                 שלנו
               </span>
             </h2>
 
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+            <p className="text-primary-foreground/70 max-w-2xl mx-auto text-lg">
               העקרונות שמנחים אותנו בכל יום ובכל תכשיט שאנו יוצרים
             </p>
           </motion.div>
@@ -306,18 +310,18 @@ export default function AboutPage() {
                 animate={valuesInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ y: -8 }}
-                className="group relative bg-background rounded-2xl p-6 text-center shadow-lg border border-transparent hover:border-gold-500/30 transition-all duration-500"
+                className="group relative bg-white/5 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/10 hover:border-gold-500/30 transition-all duration-500"
               >
                 {/* Icon */}
                 <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${value.gradient} flex items-center justify-center mx-auto mb-5 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                   <value.icon className="h-8 w-8 text-primary" />
                 </div>
 
-                <h3 className="font-bold text-lg mb-3">{value.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{value.description}</p>
+                <h3 className="font-bold text-lg mb-3 text-primary-foreground">{value.title}</h3>
+                <p className="text-sm text-primary-foreground/60 leading-relaxed">{value.description}</p>
 
                 {/* Hover glow */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-gold-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-gold-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
               </motion.div>
             ))}
           </div>
@@ -325,8 +329,18 @@ export default function AboutPage() {
       </section>
 
       {/* Timeline Section */}
-      <section ref={timelineRef} className="py-24 lg:py-32 relative">
-        <div className="absolute top-1/2 right-0 w-96 h-96 bg-gold-400/5 rounded-full blur-[100px] -translate-y-1/2" />
+      <section ref={timelineRef} className="py-24 lg:py-32 relative bg-gradient-to-b from-stone-50 to-white">
+        {/* Subtle pattern background */}
+        <div className="absolute inset-0 opacity-[0.03]">
+          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <defs>
+              <pattern id="timelinePattern" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M10 0 L20 10 L10 20 L0 10 Z" fill="none" stroke="currentColor" strokeWidth="0.5" />
+              </pattern>
+            </defs>
+            <rect width="100" height="100" fill="url(#timelinePattern)" />
+          </svg>
+        </div>
 
         <div className="container mx-auto px-4 relative">
           {/* Section header */}
@@ -336,92 +350,217 @@ export default function AboutPage() {
             animate={timelineInView ? { opacity: 1, y: 0 } : {}}
           >
             <div className="inline-flex items-center gap-2 px-5 py-2 bg-gold-500/10 border border-gold-500/20 rounded-full mb-6">
-              <Diamond className="w-4 h-4 text-gold-500" />
-              <span className="text-sm font-medium text-gold-600">לאורך השנים</span>
+              <Diamond className="w-4 h-4 text-gold-600" />
+              <span className="text-sm font-medium text-gold-700">לאורך השנים</span>
             </div>
 
             <h2 className="text-4xl lg:text-5xl font-bold mb-5">
-              <span>ציוני </span>
+              <span className="text-gray-900">ציוני </span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-500 to-gold-600">
                 דרך
               </span>
             </h2>
 
-            <p className="text-muted-foreground text-lg">המסע שלנו מאז 1985</p>
+            <p className="text-gray-500 text-lg">המסע שלנו מאז 1985</p>
           </motion.div>
 
-          {/* Timeline */}
-          <div className="max-w-4xl mx-auto">
+          {/* Timeline - Clean vertical design */}
+          <div className="max-w-5xl mx-auto relative">
+            {/* Vertical line */}
+            <div className="absolute right-6 md:right-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-gold-400 via-gold-500 to-gold-300" />
+
             {milestones.map((milestone, index) => (
               <motion.div
                 key={milestone.year}
-                initial={{ opacity: 0, x: index % 2 === 0 ? 50 : -50 }}
-                animate={timelineInView ? { opacity: 1, x: 0 } : {}}
-                transition={{ delay: index * 0.15 }}
-                className="flex gap-6 mb-12 last:mb-0"
+                initial={{ opacity: 0, y: 40 }}
+                animate={timelineInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: 0.2 + index * 0.1, duration: 0.5 }}
+                className={`relative flex items-center mb-12 last:mb-0 ${
+                  index % 2 === 0 ? 'md:flex-row-reverse' : ''
+                }`}
               >
-                {/* Year badge */}
-                <div className="flex flex-col items-center">
+                {/* Timeline node */}
+                <div className="absolute right-4 md:right-1/2 md:-translate-x-1/2 z-10">
                   <motion.div
-                    className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center text-primary font-bold shadow-lg"
-                    whileHover={{ scale: 1.1 }}
-                  >
-                    {milestone.year}
-                  </motion.div>
-                  {index < milestones.length - 1 && (
-                    <div className="w-0.5 flex-1 bg-gradient-to-b from-gold-500/50 to-transparent mt-4" />
-                  )}
+                    className="w-5 h-5 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 shadow-lg shadow-gold-500/30 border-4 border-white"
+                    whileHover={{ scale: 1.2 }}
+                  />
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 pt-3 pb-8">
-                  <h3 className="font-bold text-xl mb-2">{milestone.title}</h3>
-                  <p className="text-muted-foreground">{milestone.description}</p>
+                <div className={`w-full md:w-1/2 ${index % 2 === 0 ? 'md:pr-12 pr-12' : 'md:pl-12 pr-12 md:pr-0'}`}>
+                  <motion.div
+                    className="group bg-white rounded-2xl p-6 shadow-lg shadow-black/5 border border-gray-100 hover:border-gold-300 hover:shadow-xl hover:shadow-gold-500/10 transition-all duration-300"
+                    whileHover={{ y: -4 }}
+                  >
+                    {/* Year */}
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-gold-500 to-gold-600 rounded-full mb-4">
+                      <span className="text-sm font-bold text-white">{milestone.year}</span>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="font-bold text-xl text-gray-900 mb-2 group-hover:text-gold-600 transition-colors">
+                      {milestone.title}
+                    </h3>
+
+                    {/* Description */}
+                    <p className="text-gray-600 leading-relaxed">
+                      {milestone.description}
+                    </p>
+
+                    {/* Bottom accent */}
+                    <div className="mt-4 h-1 w-12 bg-gradient-to-r from-gold-400 to-gold-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </motion.div>
                 </div>
+
+                {/* Empty space for opposite side */}
+                <div className="hidden md:block w-1/2" />
               </motion.div>
             ))}
           </div>
+
+          {/* Bottom decorative element */}
+          <motion.div
+            className="flex justify-center mt-16"
+            initial={{ opacity: 0 }}
+            animate={timelineInView ? { opacity: 1 } : {}}
+            transition={{ delay: 0.8 }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="h-px w-16 bg-gradient-to-r from-transparent to-gold-400" />
+              <Diamond className="w-6 h-6 text-gold-500" />
+              <div className="h-px w-16 bg-gradient-to-l from-transparent to-gold-400" />
+            </div>
+          </motion.div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-24 lg:py-32 bg-primary text-primary-foreground overflow-hidden">
-        {/* Background effects */}
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.15),transparent_50%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(212,175,55,0.1),transparent_50%)]" />
+      <section className="relative py-24 lg:py-32 overflow-hidden">
+        {/* Stunning dark background - black & white only */}
+        <div className="absolute inset-0 bg-[conic-gradient(at_top,#000_0%,#000_40%,#1a1a1a_50%,#000_60%,#000_100%)]">
+          {/* Animated gradient mesh */}
+          <motion.div
+            className="absolute inset-0"
+            animate={{
+              backgroundPosition: ['0% 0%', '100% 100%'],
+            }}
+            transition={{
+              duration: 20,
+              repeat: Infinity,
+              repeatType: 'reverse',
+            }}
+            style={{
+              backgroundImage: `
+                radial-gradient(at 10% 20%, rgba(255,255,255,0.08) 0px, transparent 50%),
+                radial-gradient(at 90% 20%, rgba(255,255,255,0.05) 0px, transparent 50%),
+                radial-gradient(at 50% 80%, rgba(255,255,255,0.06) 0px, transparent 50%)
+              `,
+              backgroundSize: '200% 200%',
+            }}
+          />
+
+          {/* Diamond pattern overlay */}
+          <div className="absolute inset-0 opacity-[0.03]">
+            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <defs>
+                <pattern id="aboutCtaDiamondPattern" width="15" height="15" patternUnits="userSpaceOnUse">
+                  <path
+                    d="M7.5 0 L15 7.5 L7.5 15 L0 7.5 Z"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="0.3"
+                  />
+                </pattern>
+              </defs>
+              <rect width="100" height="100" fill="url(#aboutCtaDiamondPattern)" className="text-white" />
+            </svg>
+          </div>
+
+          {/* Floating orbs */}
+          <motion.div
+            className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full"
+            style={{
+              background: 'radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 60%)',
+              filter: 'blur(80px)',
+            }}
+            animate={{
+              scale: [1, 1.2, 1],
+              x: [0, 50, 0],
+              y: [0, 30, 0],
+            }}
+            transition={{
+              duration: 15,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+          />
+          <motion.div
+            className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full"
+            style={{
+              background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%)',
+              filter: 'blur(60px)',
+            }}
+            animate={{
+              scale: [1.2, 1, 1.2],
+              x: [0, -30, 0],
+              y: [0, -50, 0],
+            }}
+            transition={{
+              duration: 12,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+          />
+
+          {/* Decorative lines */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         </div>
 
-        <div className="container mx-auto px-4 relative text-center">
+        <div className="container mx-auto px-4 relative z-10 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <div className="inline-flex items-center gap-2 px-5 py-2 bg-gold-500/20 border border-gold-500/30 rounded-full mb-8">
-              <Sparkles className="w-4 h-4 text-gold-400" />
-              <span className="text-sm font-medium text-gold-300">בואו להכיר אותנו</span>
+            <div className="inline-flex items-center gap-2 px-5 py-2 bg-gold-500/10 border border-gold-500/20 rounded-full mb-8">
+              <DoorOpen className="w-4 h-4 text-gold-400" />
+              <span className="text-sm font-medium text-gold-400">בואו להכיר אותנו</span>
             </div>
 
-            <h2 className="text-4xl lg:text-5xl font-bold mb-6">
-              בואו לבקר אותנו
+            <h2 className="text-4xl lg:text-5xl font-bold mb-6 text-white">
+              <span>בואו </span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-300 to-gold-500">
+                לבקר אותנו
+              </span>
             </h2>
 
-            <p className="text-xl text-primary-foreground/70 max-w-2xl mx-auto mb-10">
+            <p className="text-xl text-white/70 max-w-2xl mx-auto mb-10">
               אנו מזמינים אתכם לבקר בחנות שלנו ולחוות את היופי והאיכות של התכשיטים שלנו מקרוב
             </p>
+
+            {/* Decorative element */}
+            <div className="flex items-center justify-center gap-4 mb-10">
+              <div className="h-px w-16 bg-gradient-to-r from-transparent to-gold-500/50" />
+              <Diamond className="w-4 h-4 text-gold-500" />
+              <div className="h-px w-16 bg-gradient-to-l from-transparent to-gold-500/50" />
+            </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <HoverBorderGradient
                 containerClassName="rounded-full"
                 as={Link}
                 href="/contact"
-                className="flex items-center gap-2 bg-black px-6 py-2 text-base font-semibold text-gold-500"
+                className="flex items-center gap-2 bg-gradient-to-br from-black via-neutral-900 to-black px-6 py-2 text-base font-semibold"
               >
-                צור קשר
+                <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">
+                  צור קשר
+                </span>
                 <motion.span
                   animate={{ x: [0, -4, 0] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
+                  className="text-gold-400"
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </motion.span>
@@ -431,7 +570,7 @@ export default function AboutPage() {
                 containerClassName="rounded-full"
                 as={Link}
                 href="/products"
-                className="bg-black px-6 py-2 text-base font-medium text-white/90"
+                className="bg-gradient-to-br from-black via-neutral-900 to-black px-6 py-2 text-base font-medium text-white/90"
               >
                 לקולקציה
               </HoverBorderGradient>

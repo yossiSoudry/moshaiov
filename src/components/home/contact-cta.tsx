@@ -2,8 +2,8 @@
 
 import { motion, useInView } from 'framer-motion';
 import Link from 'next/link';
-import { MapPin, Phone, Clock, ArrowLeft, Diamond, Sparkles, MessageCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { MapPin, Phone, Clock, ArrowLeft, Diamond, Sparkles, MessageCircle, HeartHandshake, BadgeCheck, Scale } from 'lucide-react';
+import { HoverBorderGradient } from '@/components/ui/hover-border-gradient';
 import { useRef } from 'react';
 
 const contactInfo = [
@@ -37,7 +37,7 @@ export function ContactCTA() {
       className="relative py-24 lg:py-32 overflow-hidden"
     >
       {/* Stunning dark background with gold accents */}
-      <div className="absolute inset-0 bg-primary">
+      <div className="absolute inset-0 bg-[conic-gradient(at_top,#000_0%,#000_40%,#1a1a1a_50%,#000_60%,#000_100%)]">
         {/* Animated gradient mesh */}
         <motion.div
           className="absolute inset-0"
@@ -51,9 +51,9 @@ export function ContactCTA() {
           }}
           style={{
             backgroundImage: `
-              radial-gradient(at 10% 20%, rgba(212,175,55,0.15) 0px, transparent 50%),
-              radial-gradient(at 90% 20%, rgba(163,163,163,0.1) 0px, transparent 50%),
-              radial-gradient(at 50% 80%, rgba(212,175,55,0.1) 0px, transparent 50%)
+              radial-gradient(at 10% 20%, rgba(255,255,255,0.08) 0px, transparent 50%),
+              radial-gradient(at 90% 20%, rgba(255,255,255,0.05) 0px, transparent 50%),
+              radial-gradient(at 50% 80%, rgba(255,255,255,0.06) 0px, transparent 50%)
             `,
             backgroundSize: '200% 200%',
           }}
@@ -72,7 +72,7 @@ export function ContactCTA() {
                 />
               </pattern>
             </defs>
-            <rect width="100" height="100" fill="url(#contactDiamondPattern)" className="text-gold-400" />
+            <rect width="100" height="100" fill="url(#contactDiamondPattern)" className="text-white" />
           </svg>
         </div>
 
@@ -80,7 +80,7 @@ export function ContactCTA() {
         <motion.div
           className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(212,175,55,0.15) 0%, transparent 60%)',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 60%)',
             filter: 'blur(80px)',
           }}
           animate={{
@@ -97,7 +97,7 @@ export function ContactCTA() {
         <motion.div
           className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(212,175,55,0.1) 0%, transparent 60%)',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%)',
             filter: 'blur(60px)',
           }}
           animate={{
@@ -113,8 +113,8 @@ export function ContactCTA() {
         />
 
         {/* Decorative lines */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-500/30 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-500/30 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
@@ -243,50 +243,42 @@ export function ContactCTA() {
 
           {/* CTA Buttons */}
           <motion.div
-            className="flex flex-col sm:flex-row items-center justify-center gap-5"
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
             initial={{ opacity: 0, y: 30 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.8, delay: 0.9 }}
           >
-            <Button
-              size="xl"
-              asChild
-              className="group relative overflow-hidden bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-primary border-0 px-10 py-6 text-lg font-semibold rounded-full shadow-lg shadow-gold-500/25 transition-all duration-500 hover:shadow-xl hover:shadow-gold-500/30"
+            <HoverBorderGradient
+              containerClassName="rounded-full"
+              as={Link}
+              href="/contact"
+              className="flex items-center gap-2 bg-gradient-to-br from-black via-neutral-900 to-black px-6 py-2 text-base font-semibold"
             >
-              <Link href="/contact">
-                <span className="relative z-10 flex items-center gap-3">
-                  צור קשר
-                  <motion.span
-                    animate={{ x: [0, -4, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <ArrowLeft className="h-5 w-5" />
-                  </motion.span>
-                </span>
-                {/* Shine effect */}
-                <div className="absolute inset-0 overflow-hidden rounded-full">
-                  <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/30 to-transparent group-hover:translate-x-[100%] transition-transform duration-1000" />
-                </div>
-              </Link>
-            </Button>
-
-            <Button
-              size="xl"
-              variant="outline"
-              asChild
-              className="relative overflow-hidden border-2 border-primary-foreground/20 text-primary-foreground hover:border-green-500/50 hover:text-green-400 bg-transparent px-10 py-6 text-lg font-medium rounded-full transition-all duration-500 group"
-            >
-              <a
-                href="https://wa.me/972501234567"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3"
+              <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">
+                צור קשר
+              </span>
+              <motion.span
+                animate={{ x: [0, -4, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="text-gold-400"
               >
-                <MessageCircle className="h-5 w-5" />
-                <span className="relative z-10">WhatsApp</span>
-                <div className="absolute inset-0 bg-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full" />
-              </a>
-            </Button>
+                <ArrowLeft className="h-4 w-4" />
+              </motion.span>
+            </HoverBorderGradient>
+
+            <HoverBorderGradient
+              containerClassName="rounded-full"
+              as="a"
+              href="https://wa.me/972501234567"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 bg-gradient-to-br from-black via-neutral-900 to-black px-6 py-2 text-base font-medium"
+            >
+              <MessageCircle className="h-4 w-4 text-green-400" />
+              <span className="bg-gradient-to-r from-green-300 via-green-400 to-emerald-500 bg-clip-text text-transparent">
+                WhatsApp
+              </span>
+            </HoverBorderGradient>
           </motion.div>
 
           {/* Trust indicators */}
@@ -297,9 +289,9 @@ export function ContactCTA() {
             transition={{ duration: 0.8, delay: 1.1 }}
           >
             {[
-              { label: 'שירות אישי', icon: '✨' },
-              { label: 'ייעוץ מקצועי', icon: '💎' },
-              { label: 'מחירים הוגנים', icon: '🏆' },
+              { label: 'שירות אישי', Icon: HeartHandshake },
+              { label: 'ייעוץ מקצועי', Icon: BadgeCheck },
+              { label: 'מחירים הוגנים', Icon: Scale },
             ].map((item, index) => (
               <motion.div
                 key={item.label}
@@ -308,7 +300,7 @@ export function ContactCTA() {
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.5, delay: 1.2 + index * 0.1 }}
               >
-                <span className="text-lg">{item.icon}</span>
+                <item.Icon className="w-5 h-5 text-gold-400" />
                 <span className="text-sm font-medium">{item.label}</span>
               </motion.div>
             ))}

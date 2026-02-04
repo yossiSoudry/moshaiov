@@ -13,6 +13,8 @@ interface HoverBorderGradientProps
   duration?: number;
   clockwise?: boolean;
   href?: string;
+  target?: string;
+  rel?: string;
 }
 
 export function HoverBorderGradient({

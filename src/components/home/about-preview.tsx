@@ -12,19 +12,19 @@ const features = [
     icon: Award,
     title: 'מומחיות',
     description: 'למעלה מ-40 שנות ניסיון בעיצוב ויצירת תכשיטים',
-    color: 'from-gold-400 to-gold-600',
+    color: 'from-silver-400 to-gold-400',
   },
   {
     icon: Gem,
     title: 'איכות',
     description: 'רק זהב אמיתי ויהלומים מוסמכים',
-    color: 'from-silver-300 to-silver-500',
+    color: 'from-silver-400 to-gold-400',
   },
   {
     icon: Shield,
     title: 'אחריות',
     description: 'אחריות מלאה על כל תכשיט',
-    color: 'from-gold-300 to-gold-500',
+    color: 'from-silver-400 to-gold-400',
   },
   {
     icon: Heart,

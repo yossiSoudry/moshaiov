@@ -189,7 +189,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
             <motion.button
               onClick={handleFavorite}
               className={cn(
-                'absolute top-4 left-4 p-2.5 rounded-full transition-all duration-300 z-10',
+                'absolute top-2 left-2 sm:top-4 sm:left-4 p-1.5 sm:p-2.5 rounded-full transition-all duration-300 z-10',
                 isFavorite
                   ? 'bg-black/90 backdrop-blur-sm shadow-lg shadow-gold-500/30'
                   : isLight
@@ -202,7 +202,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
             >
               <Heart
                 className={cn(
-                  'h-5 w-5 transition-all duration-300',
+                  'h-4 w-4 sm:h-5 sm:w-5 transition-all duration-300',
                   isFavorite && 'fill-gold-400 text-gold-500 scale-110'
                 )}
               />
@@ -210,14 +210,14 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
 
             {/* Featured/Sale badge */}
             {(isFeatured || (productWithPrice.salePrice && productWithPrice.basePrice && productWithPrice.basePrice > productWithPrice.salePrice)) && (
-              <div className="absolute top-4 right-4 z-10">
+              <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10">
                 {productWithPrice.salePrice && productWithPrice.basePrice && productWithPrice.basePrice > productWithPrice.salePrice ? (
-                  <span className="bg-destructive text-destructive-foreground px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">
+                  <span className="bg-destructive text-destructive-foreground px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold shadow-lg">
                     -{Math.round((1 - productWithPrice.salePrice / productWithPrice.basePrice) * 100)}%
                   </span>
                 ) : isFeatured ? (
                   <span className={cn(
-                    "px-3 py-1.5 rounded-full text-xs font-medium shadow-md",
+                    "px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-medium shadow-md",
                     isLight
                       ? "bg-neutral-900 text-white"
                       : "bg-black/80 text-white border border-white/20"
@@ -230,8 +230,8 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
 
             {/* Stock badges */}
             {stockInfo && (
-              <div className="absolute bottom-4 right-4 z-10">
-                <Badge variant={stockInfo.outOfStock ? 'secondary' : 'destructive'} className="shadow-lg">
+              <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 z-10">
+                <Badge variant={stockInfo.outOfStock ? 'secondary' : 'destructive'} className="shadow-lg text-[10px] sm:text-xs">
                   {stockInfo.text}
                 </Badge>
               </div>
@@ -239,9 +239,9 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
           </div>
 
           {/* Product Info */}
-          <CardContent className="p-5 space-y-3">
+          <CardContent className="p-3 sm:p-5 space-y-2 sm:space-y-3">
             <h3 className={cn(
-              "font-semibold text-lg leading-tight line-clamp-2 transition-colors duration-300",
+              "font-semibold text-sm sm:text-lg leading-tight line-clamp-2 transition-colors duration-300",
               isLight
                 ? "text-neutral-900 group-hover:text-gold-600"
                 : "text-white group-hover:text-gold-400"
@@ -249,10 +249,10 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
               {product.name}
             </h3>
 
-            {/* Description */}
+            {/* Description - hidden on mobile */}
             {product.description && (
               <p className={cn(
-                "text-sm line-clamp-2",
+                "hidden sm:block text-sm line-clamp-2",
                 isLight ? "text-neutral-500" : "text-white/60"
               )}>
                 {product.description.replace(/<[^>]*>/g, '').slice(0, 80)}...
@@ -260,13 +260,13 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
             )}
 
             {/* Rating */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <div className="flex items-center">
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
                     className={cn(
-                      'w-4 h-4',
+                      'w-3 h-3 sm:w-4 sm:h-4',
                       i < rating
                         ? 'fill-gold-400 text-gold-400'
                         : isLight ? 'text-neutral-200' : 'text-white/20'
@@ -275,21 +275,21 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
                 ))}
               </div>
               <span className={cn(
-                "text-sm",
+                "text-xs sm:text-sm",
                 isLight ? "text-neutral-400" : "text-white/50"
-              )}>({reviewCount} ביקורות)</span>
+              )}>({reviewCount})</span>
             </div>
 
             {/* Price and Add to Cart */}
-            <div className="flex items-center justify-between pt-2">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between pt-1 sm:pt-2 gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
                 <span className={cn(
-                  "text-2xl font-bold",
+                  "text-base sm:text-2xl font-bold",
                   isLight ? "text-neutral-900" : "text-white"
                 )}>{priceDisplay}</span>
                 {productWithPrice.salePrice && productWithPrice.basePrice && productWithPrice.basePrice > productWithPrice.salePrice && (
                   <span className={cn(
-                    "text-sm line-through",
+                    "text-xs sm:text-sm line-through",
                     isLight ? "text-neutral-400" : "text-white/50"
                   )}>
                     {formatPrice(productWithPrice.basePrice)}
@@ -302,10 +302,10 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
                   size="sm"
                   onClick={handleAddToCart}
                   disabled={isLoading}
-                  className="rounded-full px-5 py-2 text-sm font-medium bg-black hover:bg-black/80 text-gold-400 shadow-lg border border-gold-500/30"
+                  className="rounded-full p-2 sm:px-5 sm:py-2 text-sm font-medium bg-black hover:bg-black/80 text-gold-400 shadow-lg border border-gold-500/30"
                 >
-                  <ShoppingBag className="h-4 w-4 me-1.5" />
-                  הוסף
+                  <ShoppingBag className="h-4 w-4 sm:me-1.5" />
+                  <span className="hidden sm:inline">הוסף</span>
                 </Button>
               )}
 
@@ -314,11 +314,12 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
                   size="sm"
                   variant="outline"
                   className={cn(
-                    "rounded-full px-5 py-2 text-sm font-medium border-gold-500/30 hover:border-gold-500 hover:bg-gold-500/10",
+                    "rounded-full p-2 sm:px-5 sm:py-2 text-sm font-medium border-gold-500/30 hover:border-gold-500 hover:bg-gold-500/10",
                     isLight ? "text-neutral-700" : "text-white"
                   )}
                 >
-                  בחר אפשרות
+                  <ShoppingBag className="h-4 w-4 sm:hidden" />
+                  <span className="hidden sm:inline">בחר אפשרות</span>
                 </Button>
               )}
             </div>

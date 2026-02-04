@@ -68,6 +68,14 @@ export const Navbar = ({ children, className }: NavbarProps) => {
     <>
       <motion.div
         ref={ref}
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{
+          type: "spring",
+          stiffness: 100,
+          damping: 20,
+          delay: 0.1,
+        }}
         className={cn("fixed inset-x-0 top-4 z-50 w-full", className)}
       >
         {React.Children.map(children, (child) =>
