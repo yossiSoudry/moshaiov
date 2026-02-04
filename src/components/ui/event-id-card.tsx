@@ -1,7 +1,7 @@
 "use client";
 import * as THREE from "three";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { Canvas, extend, useThree, useFrame, Object3DNode } from "@react-three/fiber";
+import { Canvas, extend, useThree, useFrame } from "@react-three/fiber";
 import {
   Text,
   Environment,
@@ -22,10 +22,12 @@ import { MeshLineGeometry, MeshLineMaterial } from "meshline";
 extend({ MeshLineGeometry, MeshLineMaterial });
 
 // Declare types for meshline JSX elements
-declare module "@react-three/fiber" {
-  interface ThreeElements {
-    meshLineGeometry: Object3DNode<MeshLineGeometry, typeof MeshLineGeometry>;
-    meshLineMaterial: Object3DNode<MeshLineMaterial, typeof MeshLineMaterial>;
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      meshLineGeometry: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & { ref?: React.Ref<MeshLineGeometry> };
+      meshLineMaterial: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & Record<string, unknown>;
+    }
   }
 }
 
