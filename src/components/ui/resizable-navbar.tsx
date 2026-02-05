@@ -291,6 +291,7 @@ export const NavbarButton = ({
     Tag,
     {
       href: href || undefined,
+      prefetch: href ? false : undefined,
       className: cn(baseStyles, variantStyles[variant], className),
       ...props,
     },
