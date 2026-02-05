@@ -15,6 +15,7 @@ interface HoverBorderGradientProps
   href?: string;
   target?: string;
   rel?: string;
+  prefetch?: boolean;
 }
 
 export function HoverBorderGradient({

@@ -31,6 +31,7 @@ export function HeroSection() {
               containerClassName="rounded-full"
               as={Link}
               href="/products"
+              prefetch={false}
               className="flex items-center gap-2 bg-black px-6 py-2 text-base font-semibold text-gold-400"
             >
               גלו את הקולקציה
@@ -47,6 +48,7 @@ export function HeroSection() {
               containerClassName="rounded-full"
               as={Link}
               href="/about"
+              prefetch={false}
               className="bg-black px-6 py-2 text-base font-medium text-white/90"
             >
               הסיפור שלנו
