@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Heebo, Assistant } from "next/font/google";
+import { Heebo } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -11,14 +11,6 @@ const heebo = Heebo({
   variable: "--font-heebo",
   subsets: ["hebrew"],
   weight: ["400", "500", "700"],
-  display: "swap",
-  adjustFontFallback: false,
-});
-
-const assistant = Assistant({
-  variable: "--font-assistant",
-  subsets: ["hebrew"],
-  weight: ["400", "600"],
   display: "swap",
   adjustFontFallback: false,
 });
@@ -53,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl">
       <body
-        className={`${heebo.variable} ${assistant.variable} font-sans antialiased min-h-screen flex flex-col`}
+        className={`${heebo.variable} font-sans antialiased min-h-screen flex flex-col`}
         suppressHydrationWarning
       >
         <AuthProvider>
