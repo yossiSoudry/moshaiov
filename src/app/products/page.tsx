@@ -61,7 +61,7 @@ function ProductsContent() {
     async function fetchAllProducts() {
       try {
         setIsLoading(true);
-        const res = await fetch(`/api/products?limit=1000`);
+        const res = await fetch(`/api/products?limit=200`);
         if (!res.ok) throw new Error('Failed to fetch products');
         const response = await res.json();
         setAllProducts(response.data || []);

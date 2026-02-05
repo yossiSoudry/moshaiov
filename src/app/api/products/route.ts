@@ -12,7 +12,7 @@ async function fetchWithRetry(url: string, retries = MAX_RETRIES): Promise<Respo
         headers: {
           'Content-Type': 'application/json',
         },
-        next: { revalidate: 60 }, // Cache for 60 seconds
+        next: { revalidate: 300 }, // Cache for 5 minutes
       });
 
       if (response.ok) {
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
     return NextResponse.json(data, {
       headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
       },
     });
   } catch (error) {
