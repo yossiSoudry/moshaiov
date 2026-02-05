@@ -75,23 +75,45 @@ export default function CheckoutPage() {
 
   // Check if cart exists
   useEffect(() => {
-    const cartId = getCartId();
-    if (!cartId || !cart || cart.items.length === 0) {
+    if (!cart || cart.items.length === 0) {
       router.push('/cart');
     }
   }, [cart, router]);
 
-  // Initialize checkout
+  // Initialize checkout - create API cart from local cart items
   useEffect(() => {
     async function initCheckout() {
-      const cartId = getCartId();
-      if (!cartId) return;
+      if (!cart || cart.items.length === 0) return;
 
       try {
         setIsLoading(true);
+
+        // Check if we already have a cartId
+        let cartId = getCartId();
+
+        if (!cartId) {
+          // Create a new API cart
+          const apiCart = await omni.createCart();
+          cartId = apiCart.id;
+
+          // Save cartId to localStorage
+          localStorage.setItem('cartId', cartId);
+
+          // Add all local cart items to the API cart
+          for (const item of cart.items) {
+            await omni.addToCart(cartId, {
+              productId: item.productId,
+              variantId: item.variantId,
+              quantity: item.quantity,
+            });
+          }
+        }
+
+        // Create checkout from cart
         const checkoutData = await omni.createCheckout({ cartId });
         setCheckout(checkoutData);
       } catch (err) {
+        console.error('Checkout init error:', err);
         setError(err instanceof Error ? err.message : 'שגיאה ביצירת הזמנה');
       } finally {
         setIsLoading(false);
@@ -99,7 +121,7 @@ export default function CheckoutPage() {
     }
 
     initCheckout();
-  }, []);
+  }, [cart]);
 
   // Handle shipping address submission
   const handleAddressSubmit = async (e: React.FormEvent) => {
