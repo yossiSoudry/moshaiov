@@ -69,6 +69,7 @@ const CartIcon = forwardRef<CartIconHandle, CartIconProps>(
         className={cn(className)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        suppressHydrationWarning
         {...props}
       >
         <motion.svg

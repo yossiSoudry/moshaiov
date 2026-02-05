@@ -8,7 +8,8 @@ import {
   useMotionValueEvent,
 } from "motion/react";
 import Link from "next/link";
-import React, { useRef, useState, createElement } from "react";
+import { usePathname } from "next/navigation";
+import React, { useRef, useState, useEffect, createElement } from "react";
 
 interface NavbarProps {
   children: React.ReactNode;
@@ -122,9 +123,24 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
 
 export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
   const [hovered, setHovered] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isActive = (link: string) => {
+    if (!mounted) return false;
+    if (link === '/') {
+      return pathname === '/';
+    }
+    return pathname.startsWith(link);
+  };
+
+  // Render consistent HTML on both server and client
   return (
-    <motion.div
+    <div
       onMouseLeave={() => setHovered(null)}
       className={cn(
         "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium lg:flex lg:space-x-2",
@@ -132,25 +148,36 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
       )}
       dir="rtl"
     >
-      {items.map((item, idx) => (
-        <Link
-          onMouseEnter={() => setHovered(idx)}
-          onClick={onItemClick}
-          className="relative px-4 py-2 text-white/80 hover:text-white transition-colors"
-          key={`link-${idx}`}
-          href={item.link}
-          prefetch={false}
-        >
-          {hovered === idx && (
-            <motion.div
-              layoutId="hovered"
-              className="absolute inset-0 h-full w-full rounded-full bg-white/10"
-            />
-          )}
-          <span className="relative z-20">{item.name}</span>
-        </Link>
-      ))}
-    </motion.div>
+      {items.map((item, idx) => {
+        const active = isActive(item.link);
+        return (
+          <Link
+            onMouseEnter={() => setHovered(idx)}
+            onClick={onItemClick}
+            className="relative px-4 py-2 transition-colors text-white/80 hover:text-white"
+            style={mounted && active ? { color: 'rgb(251, 191, 36)' } : undefined}
+            key={`link-${idx}`}
+            href={item.link}
+            prefetch={false}
+            suppressHydrationWarning
+          >
+            {mounted && hovered === idx && (
+              <motion.div
+                layoutId="hovered"
+                className="absolute inset-0 h-full w-full rounded-full bg-white/10"
+              />
+            )}
+            {mounted && active && (
+              <motion.div
+                layoutId="active"
+                className="absolute inset-x-2 -bottom-1 h-0.5 bg-gradient-to-r from-transparent via-gold-500 to-transparent"
+              />
+            )}
+            <span className="relative z-20">{item.name}</span>
+          </Link>
+        );
+      })}
+    </div>
   );
 };
 

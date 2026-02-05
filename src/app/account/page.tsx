@@ -69,7 +69,7 @@ export default function AccountPage() {
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
-      <div className="bg-primary text-primary-foreground py-12">
+      <div className="bg-primary text-primary-foreground pt-32 pb-12">
         <div className="container mx-auto px-4">
           <h1 className="text-2xl lg:text-3xl font-bold mb-2">החשבון שלי</h1>
           <p className="text-primary-foreground/70">
@@ -83,13 +83,6 @@ export default function AccountPage() {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <nav className="bg-background rounded-xl p-4 space-y-1">
-              <Link
-                href="/account"
-                className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-primary-foreground"
-              >
-                <User className="h-5 w-5" />
-                סקירה כללית
-              </Link>
               <Link
                 href="/account/orders"
                 className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition-colors"
@@ -114,7 +107,7 @@ export default function AccountPage() {
               <Separator className="my-2" />
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition-colors w-full text-destructive"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition-colors w-full text-destructive cursor-pointer"
               >
                 <LogOut className="h-5 w-5" />
                 התנתקות

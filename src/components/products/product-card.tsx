@@ -1,17 +1,29 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Heart, ShoppingBag, Sparkles, Star } from 'lucide-react';
 import { cn, formatPrice, formatPriceRange } from '@/lib/utils';
 import { useCartStore } from '@/store/cart-store';
+import { useFavoritesStore } from '@/store/favorites-store';
 import { useFlyToCart } from '@/components/ui/fly-to-cart';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Product } from 'omni-sync-sdk';
+
+// Generate deterministic "random" number from string (for review count)
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash);
+}
 
 interface ProductCardProps {
   product: Product;
@@ -21,11 +33,19 @@ interface ProductCardProps {
 
 export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
   const { addToCart, isLoading } = useCartStore();
+  const { isFavorite, addToFavorites, removeFromFavorites } = useFavoritesStore();
   const { triggerFly } = useFlyToCart();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Only check favorites after mount to prevent hydration mismatch
+  const isProductFavorite = mounted && isFavorite(product.id);
 
   const isLight = variant === 'light';
 
@@ -44,8 +64,9 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
       : formatPriceRange(minPrice, maxPrice);
 
   // Mock rating data (can be replaced with real data when available)
+  // Use deterministic hash for review count to prevent hydration mismatch
   const rating = 5;
-  const reviewCount = Math.floor(Math.random() * 150) + 50;
+  const reviewCount = (hashString(product.id) % 150) + 50;
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -69,7 +90,16 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
   const handleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsFavorite(!isFavorite);
+    if (isProductFavorite) {
+      removeFromFavorites(product.id);
+    } else {
+      addToFavorites({
+        productId: product.id,
+        name: product.name,
+        image: product.images?.[0]?.url,
+        price: minPrice,
+      });
+    }
   };
 
   const getStockDisplay = () => {
@@ -191,7 +221,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
               onClick={handleFavorite}
               className={cn(
                 'absolute top-2 left-2 sm:top-4 sm:left-4 p-1.5 sm:p-2.5 rounded-full transition-all duration-300 z-10',
-                isFavorite
+                isProductFavorite
                   ? 'bg-black/90 backdrop-blur-sm shadow-lg shadow-gold-500/30'
                   : isLight
                     ? 'bg-white/90 backdrop-blur-sm hover:bg-white text-neutral-400 hover:text-neutral-600 shadow-md'
@@ -199,12 +229,12 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
               )}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              aria-label={isFavorite ? 'הסר מהמועדפים' : 'הוסף למועדפים'}
+              aria-label={isProductFavorite ? 'הסר מהמועדפים' : 'הוסף למועדפים'}
             >
               <Heart
                 className={cn(
                   'h-4 w-4 sm:h-5 sm:w-5 transition-all duration-300',
-                  isFavorite && 'fill-gold-400 text-gold-500 scale-110'
+                  isProductFavorite && 'fill-gold-400 text-gold-500 scale-110'
                 )}
               />
             </motion.button>

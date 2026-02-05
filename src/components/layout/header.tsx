@@ -2,12 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X } from 'lucide-react';
+import { Search, X, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SearchIcon } from '@/components/ui/search';
 import { CartIcon } from '@/components/ui/cart';
 import { useCartStore } from '@/store/cart-store';
+import { useAuthStore } from '@/store/auth-store';
 import { useFlyToCart } from '@/components/ui/fly-to-cart';
 import { SearchDropdown } from './search-dropdown';
 import { CartDrawer } from './cart-drawer';
@@ -34,12 +36,29 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
   const searchPopupRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const cartIconRef = useRef<HTMLDivElement>(null);
 
   const { cart, toggleCart } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
   const { setCartIconRef } = useFlyToCart();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const isActive = (link: string) => {
+    if (!isMounted) return false; // Prevent hydration mismatch
+    if (link === '/') {
+      return pathname === '/';
+    }
+    return pathname.startsWith(link);
+  };
+
+  // Handle hydration - only show auth state after mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Register cart icon ref for fly-to-cart animation
   useEffect(() => {
@@ -48,7 +67,8 @@ export function Header() {
     }
   }, [setCartIconRef]);
 
-  const itemCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  // Only compute item count after mount to prevent hydration mismatch
+  const itemCount = isMounted ? (cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0) : 0;
 
   // Focus input when search opens
   useEffect(() => {
@@ -195,7 +215,7 @@ export function Header() {
   );
 
   const ActionButtons = ({ mobile = false }: { mobile?: boolean }) => (
-    <div className={cn("flex items-center", mobile ? "gap-3" : "gap-2")}>
+    <div className={cn("flex items-center", mobile ? "gap-3" : "gap-2")} suppressHydrationWarning>
       {/* Search Button */}
       <IconButton onClick={openSearch} ariaLabel="חיפוש">
         <SearchIcon
@@ -204,8 +224,24 @@ export function Header() {
         />
       </IconButton>
 
+      {/* User/Account Button */}
+      <div className="relative" suppressHydrationWarning>
+        <IconButton
+          onClick={() => router.push(isMounted && isAuthenticated ? "/account" : "/login")}
+          ariaLabel="החשבון שלי"
+        >
+          <User
+            size={18}
+            className="text-white/70 group-hover:text-gold-400 transition-colors duration-300"
+          />
+        </IconButton>
+        {isMounted && isAuthenticated && (
+          <span className="absolute -top-1 -left-1 h-2.5 w-2.5 bg-green-500 rounded-full border-2 border-neutral-900" />
+        )}
+      </div>
+
       {/* Cart Button */}
-      <div className="relative" ref={cartIconRef} data-cart-icon>
+      <div className="relative" ref={isMounted ? cartIconRef : undefined} suppressHydrationWarning>
         <IconButton onClick={toggleCart} ariaLabel="עגלת קניות">
           <CartIcon
             size={18}
@@ -213,19 +249,17 @@ export function Header() {
           />
         </IconButton>
 
-        <AnimatePresence>
-          {itemCount > 0 && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0 }}
-              transition={{ type: "spring", stiffness: 500, damping: 20 }}
-              className="absolute -top-1.5 -left-1.5 h-5 w-5 bg-gold-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center pointer-events-none"
-            >
-              {itemCount}
-            </motion.span>
-          )}
-        </AnimatePresence>
+        {isMounted && itemCount > 0 && (
+          <motion.span
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 20 }}
+            className="absolute -top-1.5 -left-1.5 h-5 w-5 bg-gold-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center pointer-events-none"
+          >
+            {itemCount}
+          </motion.span>
+        )}
       </div>
     </div>
   );
@@ -292,9 +326,15 @@ export function Header() {
                 href={item.link}
                 prefetch={false}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="relative text-white/80 hover:text-white transition-colors text-lg"
+                className={cn(
+                  "relative transition-colors text-lg",
+                  isActive(item.link) ? "text-gold-400" : "text-white/80 hover:text-white"
+                )}
               >
                 <span className="block">{item.name}</span>
+                {isActive(item.link) && (
+                  <span className="absolute -right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-gold-500 rounded-full" />
+                )}
               </Link>
             ))}
             <div className="flex w-full flex-col gap-3 mt-4 pt-4 border-t border-white/10">

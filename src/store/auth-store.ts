@@ -29,6 +29,7 @@ interface AuthState {
   register: (data: { email: string; password: string; firstName: string; lastName: string }) => Promise<boolean>;
   logout: () => void;
   fetchProfile: () => Promise<void>;
+  updateProfile: (data: { firstName?: string; lastName?: string; phone?: string }) => Promise<boolean>;
   clearError: () => void;
 }
 
@@ -100,6 +101,21 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         error: err instanceof Error ? err.message : 'שגיאה בטעינת פרופיל',
         isLoading: false
       });
+    }
+  },
+
+  updateProfile: async (data) => {
+    set({ isLoading: true, error: null });
+    try {
+      const updated = await omni.updateMyProfile(data);
+      set({ customer: updated as unknown as Customer, isLoading: false });
+      return true;
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : 'שגיאה בעדכון הפרופיל',
+        isLoading: false
+      });
+      return false;
     }
   },
 

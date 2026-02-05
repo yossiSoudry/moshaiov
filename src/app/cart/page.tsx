@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingBag,
@@ -12,27 +13,29 @@ import {
   ChevronRight,
   Tag,
   ArrowLeft,
-  Clock,
+  Loader2,
+  CheckCircle,
 } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
-import { formatPrice, cn } from '@/lib/utils';
+import { useOrdersStore } from '@/store/orders-store';
+import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 
 export default function CartPage() {
-  const { cart, isLoading, updateQuantity, removeItem, applyCoupon, error } = useCartStore();
+  const router = useRouter();
+  const { cart, isLoading, updateQuantity, removeItem, applyCoupon, clearCart, error } = useCartStore();
+  const { createOrder } = useOrdersStore();
   const [couponCode, setCouponCode] = useState('');
   const [couponError, setCouponError] = useState('');
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
 
   const items = cart?.items || [];
-  const cartWithTotals = cart as { totals?: { subtotal?: number; discount?: number; total?: number }; reservation?: { hasReservation: boolean; remainingSeconds?: number; countdownMessage?: string } } | null;
-  const subtotal = cartWithTotals?.totals?.subtotal || 0;
-  const discount = cartWithTotals?.totals?.discount || 0;
-  const total = cartWithTotals?.totals?.total || subtotal;
-
-  // Reservation countdown
-  const reservation = cartWithTotals?.reservation;
+  const subtotal = cart?.subtotal ? parseFloat(cart.subtotal) : 0;
+  const discount = 0; // Local cart doesn't support discounts yet
+  const total = subtotal;
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +48,44 @@ export default function CartPage() {
     } catch (err) {
       setCouponError('קוד קופון לא תקין');
     }
+  };
+
+  const handleCheckout = async () => {
+    if (items.length === 0) return;
+
+    setIsCheckingOut(true);
+
+    // Simulate a brief delay for checkout process
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Create the order
+    const orderItems = items.map(item => ({
+      id: item.id,
+      productId: item.productId,
+      productName: item.product?.name || 'מוצר',
+      variantId: item.variantId,
+      variantName: item.variant?.name,
+      quantity: item.quantity,
+      unitPrice: parseFloat(item.unitPrice) || 0,
+      imageUrl: (item.product?.images as { url?: string }[] | undefined)?.[0]?.url,
+    }));
+
+    const order = createOrder({
+      items: orderItems,
+      subtotal,
+    });
+
+    // Clear the cart
+    clearCart();
+
+    // Show success and redirect
+    setOrderSuccess(true);
+    setIsCheckingOut(false);
+
+    // Redirect to orders page after a delay
+    setTimeout(() => {
+      router.push('/account/orders');
+    }, 2000);
   };
 
   if (items.length === 0) {
@@ -98,9 +139,19 @@ export default function CartPage() {
           עגלת קניות ({items.length} פריטים)
         </h1>
 
-        {/* Reservation countdown */}
-        {reservation?.hasReservation && (
-          <ReservationCountdown reservation={reservation} />
+        {/* Order success message */}
+        {orderSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3"
+          >
+            <CheckCircle className="h-6 w-6 text-green-600 shrink-0" />
+            <div>
+              <p className="font-semibold text-green-800">ההזמנה בוצעה בהצלחה!</p>
+              <p className="text-sm text-green-700">מעביר אותך לדף ההזמנות...</p>
+            </div>
+          </motion.div>
         )}
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -150,7 +201,7 @@ export default function CartPage() {
                       </p>
                     )}
                     <p className="font-semibold mt-2">
-                      {formatPrice((item as unknown as { price?: number }).price || 0)}
+                      {formatPrice(parseFloat(item.unitPrice) || 0)}
                     </p>
 
                     {/* Quantity controls */}
@@ -186,9 +237,9 @@ export default function CartPage() {
                   </div>
 
                   {/* Item total - desktop */}
-                  <div className="hidden sm:block text-left min-w-[100px]">
+                  <div className="hidden sm:block text-left min-w-25">
                     <p className="font-semibold">
-                      {formatPrice(((item as unknown as { price?: number }).price || 0) * item.quantity)}
+                      {formatPrice((parseFloat(item.unitPrice) || 0) * item.quantity)}
                     </p>
                   </div>
                 </motion.div>
@@ -251,11 +302,28 @@ export default function CartPage() {
                 <span>{formatPrice(total)}</span>
               </div>
 
-              <Button size="lg" className="w-full" asChild>
-                <Link href="/checkout">
-                  לתשלום
-                  <ArrowLeft className="h-4 w-4 me-2" />
-                </Link>
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={handleCheckout}
+                disabled={isCheckingOut || orderSuccess}
+              >
+                {isCheckingOut ? (
+                  <>
+                    <Loader2 className="h-4 w-4 me-2 animate-spin" />
+                    מבצע הזמנה...
+                  </>
+                ) : orderSuccess ? (
+                  <>
+                    <CheckCircle className="h-4 w-4 me-2" />
+                    הזמנה בוצעה!
+                  </>
+                ) : (
+                  <>
+                    לתשלום
+                    <ArrowLeft className="h-4 w-4 me-2" />
+                  </>
+                )}
               </Button>
 
               <Button variant="outline" className="w-full" asChild>
@@ -269,35 +337,6 @@ export default function CartPage() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// Reservation countdown component
-function ReservationCountdown({ reservation }: { reservation: { hasReservation: boolean; remainingSeconds?: number; countdownMessage?: string } }) {
-  const [remaining, setRemaining] = useState(reservation.remainingSeconds || 0);
-
-  // Countdown effect
-  if (remaining > 0) {
-    setTimeout(() => setRemaining(remaining - 1), 1000);
-  }
-
-  if (!reservation.hasReservation || remaining <= 0) {
-    return null;
-  }
-
-  const minutes = Math.floor(remaining / 60);
-  const seconds = remaining % 60;
-  const timeDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-
-  const message = reservation.countdownMessage
-    ? reservation.countdownMessage.replace('{time}', timeDisplay)
-    : `הפריטים שמורים עבורך למשך ${timeDisplay}`;
-
-  return (
-    <div className="mb-6 bg-warning/10 border border-warning/30 rounded-lg p-4 flex items-center gap-3">
-      <Clock className="h-5 w-5 text-warning flex-shrink-0" />
-      <p className="text-sm">{message}</p>
     </div>
   );
 }
