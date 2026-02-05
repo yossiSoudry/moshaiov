@@ -12,6 +12,7 @@ const heebo = Heebo({
   subsets: ["hebrew"],
   weight: ["400", "500", "700"],
   display: "swap",
+  adjustFontFallback: false,
 });
 
 const assistant = Assistant({
@@ -19,6 +20,7 @@ const assistant = Assistant({
   subsets: ["hebrew"],
   weight: ["400", "600"],
   display: "swap",
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
