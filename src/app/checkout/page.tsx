@@ -10,6 +10,7 @@ import {
   MapPin,
   CreditCard,
   Loader2,
+  Banknote,
 } from 'lucide-react';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
@@ -69,6 +70,8 @@ export default function CheckoutPage() {
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'bank_transfer'>('card');
+  const [hasStripeProvider, setHasStripeProvider] = useState(false);
 
   // Check if cart exists
   useEffect(() => {
@@ -134,29 +137,51 @@ export default function CheckoutPage() {
       await omni.selectShippingMethod(checkout.id, selectedRate);
 
       // Get payment providers and initialize Stripe
-      const { hasPayments, providers } = await omni.getPaymentProviders();
+      try {
+        const { hasPayments, providers } = await omni.getPaymentProviders();
 
-      if (!hasPayments) {
-        setPaymentError('התשלום אינו מוגדר לחנות זו');
-        return;
-      }
+        if (hasPayments) {
+          const stripeProvider = providers.find((p) => p.provider === 'stripe');
+          if (stripeProvider) {
+            setHasStripeProvider(true);
+            const stripe = loadStripe(stripeProvider.publicKey, {
+              stripeAccount: stripeProvider.stripeAccountId,
+            });
+            setStripePromise(stripe);
 
-      const stripeProvider = providers.find((p) => p.provider === 'stripe');
-      if (stripeProvider) {
-        const stripe = loadStripe(stripeProvider.publicKey, {
-          stripeAccount: stripeProvider.stripeAccountId,
-        });
-        setStripePromise(stripe);
-
-        // Create payment intent
-        const { clientSecret: secret } = await omni.createPaymentIntent(checkout.id);
-        setClientSecret(secret);
+            // Create payment intent
+            const { clientSecret: secret } = await omni.createPaymentIntent(checkout.id);
+            setClientSecret(secret);
+          }
+        }
+      } catch {
+        // No payment providers configured - bank transfer only
+        setHasStripeProvider(false);
+        setPaymentMethod('bank_transfer');
       }
 
       setStep('payment');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'שגיאה בבחירת משלוח');
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle bank transfer / demo checkout
+  const handleBankTransferCheckout = async () => {
+    if (!checkout) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Complete checkout without payment (order will be in pending status)
+      // The order is already created in the backend when checkout was created
+      clearCart();
+      router.push(`/checkout/success?checkoutId=${checkout.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'שגיאה בסיום ההזמנה');
       setIsLoading(false);
     }
   };
@@ -405,33 +430,125 @@ export default function CheckoutPage() {
                 className="bg-background rounded-xl p-6"
               >
                 <h2 className="text-xl font-semibold mb-6">תשלום</h2>
-                {paymentError ? (
-                  <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive">
+
+                {/* Payment method selection */}
+                <div className="space-y-3 mb-6">
+                  <p className="text-sm font-medium text-muted-foreground mb-3">בחר אמצעי תשלום:</p>
+
+                  {hasStripeProvider && (
+                    <label
+                      className={cn(
+                        'flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors',
+                        paymentMethod === 'card'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/50'
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="card"
+                        checked={paymentMethod === 'card'}
+                        onChange={() => setPaymentMethod('card')}
+                        className="w-4 h-4"
+                      />
+                      <CreditCard className="h-5 w-5" />
+                      <div>
+                        <p className="font-medium">כרטיס אשראי</p>
+                        <p className="text-sm text-muted-foreground">תשלום מאובטח באמצעות Stripe</p>
+                      </div>
+                    </label>
+                  )}
+
+                  <label
+                    className={cn(
+                      'flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors',
+                      paymentMethod === 'bank_transfer'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50'
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="bank_transfer"
+                      checked={paymentMethod === 'bank_transfer'}
+                      onChange={() => setPaymentMethod('bank_transfer')}
+                      className="w-4 h-4"
+                    />
+                    <Banknote className="h-5 w-5" />
+                    <div>
+                      <p className="font-medium">העברה בנקאית / תשלום בעת קבלה</p>
+                      <p className="text-sm text-muted-foreground">ההזמנה תישמר ותטופל לאחר אישור התשלום</p>
+                    </div>
+                  </label>
+                </div>
+
+                <Separator className="my-6" />
+
+                {paymentError && (
+                  <div className="p-4 mb-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive">
                     {paymentError}
                   </div>
-                ) : stripePromise && clientSecret ? (
-                  <Elements
-                    stripe={stripePromise}
-                    options={{
-                      clientSecret,
-                      appearance: {
-                        theme: 'stripe',
-                        variables: {
-                          colorPrimary: '#0a0a0a',
-                          fontFamily: 'Heebo, system-ui, sans-serif',
+                )}
+
+                {paymentMethod === 'card' && hasStripeProvider ? (
+                  stripePromise && clientSecret ? (
+                    <Elements
+                      stripe={stripePromise}
+                      options={{
+                        clientSecret,
+                        appearance: {
+                          theme: 'stripe',
+                          variables: {
+                            colorPrimary: '#0a0a0a',
+                            fontFamily: 'Heebo, system-ui, sans-serif',
+                          },
                         },
-                      },
-                      locale: 'he',
-                    }}
-                  >
-                    <CheckoutPaymentForm
-                      checkoutId={checkout?.id || ''}
-                      onBack={() => setStep('shipping')}
-                    />
-                  </Elements>
+                        locale: 'he',
+                      }}
+                    >
+                      <CheckoutPaymentForm
+                        checkoutId={checkout?.id || ''}
+                        onBack={() => setStep('shipping')}
+                      />
+                    </Elements>
+                  ) : (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  )
                 ) : (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <div className="space-y-4">
+                    <div className="p-4 bg-muted rounded-lg">
+                      <p className="text-sm">
+                        לאחר השלמת ההזמנה, תקבל אימייל עם פרטי ההעברה הבנקאית.
+                        ההזמנה תטופל לאחר אישור קבלת התשלום.
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => setStep('shipping')}
+                        disabled={isLoading}
+                      >
+                        חזרה
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        onClick={handleBankTransferCheckout}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 me-2 animate-spin" />
+                            מעבד...
+                          </>
+                        ) : (
+                          'סיים הזמנה'
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </motion.div>

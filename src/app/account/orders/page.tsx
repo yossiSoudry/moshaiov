@@ -16,18 +16,20 @@ import {
   Eye,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
-import { useOrdersStore, type Order } from '@/store/orders-store';
+import { omni } from '@/lib/omni-sync';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import type { Order } from 'omni-sync-sdk';
 
 export default function OrdersPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading, logout } = useAuthStore();
-  const { orders } = useOrdersStore();
 
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
@@ -38,6 +40,24 @@ export default function OrdersPage() {
     }
   }, [isAuthenticated, authLoading, router]);
 
+  // Fetch orders from API
+  useEffect(() => {
+    async function fetchOrders() {
+      try {
+        const response = await omni.getMyOrders({ limit: 50 });
+        setOrders(response.data || []);
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+      } finally {
+        setIsLoadingOrders(false);
+      }
+    }
+
+    if (isAuthenticated) {
+      fetchOrders();
+    }
+  }, [isAuthenticated]);
+
   const handleLogout = () => {
     logout();
     router.push('/');
@@ -45,10 +65,11 @@ export default function OrdersPage() {
 
   // Filter orders by search query
   const filteredOrders = orders.filter((order) => {
-    return order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase());
+    const orderNumber = (order as { orderNumber?: string }).orderNumber || order.id;
+    return orderNumber.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  if (authLoading || !isAuthenticated) {
+  if (authLoading || !isAuthenticated || isLoadingOrders) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -162,7 +183,7 @@ export default function OrdersPage() {
                         <div className="flex items-center gap-6">
                           <div>
                             <p className="text-sm text-muted-foreground">מספר הזמנה</p>
-                            <p className="font-semibold">#{order.orderNumber}</p>
+                            <p className="font-semibold">#{(order as { orderNumber?: string }).orderNumber || order.id}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">תאריך</p>
@@ -174,7 +195,7 @@ export default function OrdersPage() {
                           <div>
                             <p className="text-sm text-muted-foreground">סכום</p>
                             <p className="font-semibold">
-                              {formatPrice(order.totals.total)}
+                              {formatPrice((order as { totals?: { total?: number } }).totals?.total || (order as { total?: number }).total || 0)}
                             </p>
                           </div>
                         </div>
@@ -203,7 +224,7 @@ export default function OrdersPage() {
                         >
                           <h4 className="font-semibold mb-3">פריטים בהזמנה</h4>
                           <div className="space-y-3">
-                            {order.items.map((item) => (
+                            {((order as { items?: Array<{ id: string; productName?: string; name?: string; imageUrl?: string; variantName?: string; quantity: number; unitPrice?: number; price?: number }> }).items || []).map((item) => (
                               <div
                                 key={item.id}
                                 className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg"
@@ -211,12 +232,12 @@ export default function OrdersPage() {
                                 {item.imageUrl && (
                                   <img
                                     src={item.imageUrl}
-                                    alt={item.productName}
+                                    alt={item.productName || item.name || ''}
                                     className="w-16 h-16 object-cover rounded"
                                   />
                                 )}
                                 <div className="flex-1">
-                                  <p className="font-medium">{item.productName}</p>
+                                  <p className="font-medium">{item.productName || item.name}</p>
                                   {item.variantName && (
                                     <p className="text-sm text-muted-foreground">
                                       {item.variantName}
@@ -227,25 +248,28 @@ export default function OrdersPage() {
                                   </p>
                                 </div>
                                 <p className="font-semibold">
-                                  {formatPrice(item.unitPrice * item.quantity)}
+                                  {formatPrice((item.unitPrice || item.price || 0) * item.quantity)}
                                 </p>
                               </div>
                             ))}
                           </div>
 
                           {/* Shipping address */}
-                          {order.shippingAddress && (
-                            <div className="mt-4 pt-4 border-t border-border">
-                              <h4 className="font-semibold mb-2">כתובת למשלוח</h4>
-                              <p className="text-muted-foreground">
-                                {order.shippingAddress.firstName} {order.shippingAddress.lastName}
-                                <br />
-                                {order.shippingAddress.address1}
-                                <br />
-                                {order.shippingAddress.city}
-                              </p>
-                            </div>
-                          )}
+                          {(() => {
+                            const addr = (order as { shippingAddress?: { firstName?: string; lastName?: string; address1?: string; line1?: string; city?: string } }).shippingAddress;
+                            return addr && (
+                              <div className="mt-4 pt-4 border-t border-border">
+                                <h4 className="font-semibold mb-2">כתובת למשלוח</h4>
+                                <p className="text-muted-foreground">
+                                  {addr.firstName} {addr.lastName}
+                                  <br />
+                                  {addr.address1 || addr.line1}
+                                  <br />
+                                  {addr.city}
+                                </p>
+                              </div>
+                            );
+                          })()}
                         </motion.div>
                       )}
                     </motion.div>
