@@ -122,6 +122,7 @@ export function CategoriesSection() {
         >
           <Link
             href="/products"
+            prefetch={false}
             className="inline-flex items-center gap-3 px-8 py-4 bg-gold-500 text-black rounded-full font-medium hover:bg-gold-400 transition-all duration-300 group shadow-lg shadow-gold-500/20 hover:shadow-xl hover:shadow-gold-500/30 hover:-translate-y-1"
           >
             <span>צפו בכל הקולקציה</span>
