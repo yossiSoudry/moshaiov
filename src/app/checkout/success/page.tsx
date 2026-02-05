@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
   const checkoutId = searchParams.get('checkoutId');
+  const isDemo = searchParams.get('demo') === 'true';
   const { clearCart } = useCartStore();
 
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
@@ -19,15 +20,15 @@ function CheckoutSuccessContent() {
 
   useEffect(() => {
     async function getOrderInfo() {
-      if (!checkoutId) {
+      // Clear the cart
+      clearCart();
+
+      if (isDemo || !checkoutId) {
         setIsLoading(false);
         return;
       }
 
       try {
-        // Clear the cart
-        clearCart();
-
         // Get payment status to retrieve order info
         const status = await omni.getPaymentStatus(checkoutId);
         if (status.orderNumber) {
@@ -42,7 +43,7 @@ function CheckoutSuccessContent() {
     }
 
     getOrderInfo();
-  }, [checkoutId, clearCart]);
+  }, [checkoutId, isDemo, clearCart]);
 
   if (isLoading) {
     return (
@@ -69,7 +70,7 @@ function CheckoutSuccessContent() {
         </motion.div>
 
         <h1 className="text-2xl lg:text-3xl font-bold mb-4">
-          ההזמנה התקבלה בהצלחה!
+          {isDemo ? 'הזמנת דמו התקבלה!' : 'ההזמנה התקבלה בהצלחה!'}
         </h1>
 
         {orderNumber && (
@@ -78,10 +79,22 @@ function CheckoutSuccessContent() {
           </p>
         )}
 
-        <p className="text-muted-foreground mb-8">
-          תודה על הזמנתך! שלחנו לך אימייל עם פרטי ההזמנה.
-          נעדכן אותך כשההזמנה תצא למשלוח.
-        </p>
+        {isDemo ? (
+          <div className="mb-8">
+            <p className="text-muted-foreground mb-4">
+              זוהי הזמנת דמו לצורך בדיקה בלבד.
+            </p>
+            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-700 dark:text-amber-400 text-sm">
+              <p className="font-medium mb-1">שים לב:</p>
+              <p>ההזמנה לא נשמרה במערכת כי לא הוגדרו הרשאות מתאימות (cart:write, checkout:write) בחיבור לבריינרס.</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-muted-foreground mb-8">
+            תודה על הזמנתך! שלחנו לך אימייל עם פרטי ההזמנה.
+            נעדכן אותך כשההזמנה תצא למשלוח.
+          </p>
+        )}
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Button size="lg" asChild>

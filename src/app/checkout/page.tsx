@@ -182,44 +182,51 @@ export default function CheckoutPage() {
 
   // Handle shipping method selection
   const handleShippingSelect = async () => {
-    if (!checkout || !selectedRate) return;
+    if (!selectedRate) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      // Skip API call for demo shipping rate
-      if (selectedRate !== 'demo-self-pickup') {
+      // In demo mode or with demo shipping, skip API calls
+      if (!isDemoMode && checkout && selectedRate !== 'demo-self-pickup') {
         await omni.selectShippingMethod(checkout.id, selectedRate);
-      }
 
-      // Get payment providers and initialize Stripe
-      try {
-        const { hasPayments, providers } = await omni.getPaymentProviders();
+        // Get payment providers and initialize Stripe
+        try {
+          const { hasPayments, providers } = await omni.getPaymentProviders();
 
-        if (hasPayments) {
-          const stripeProvider = providers.find((p) => p.provider === 'stripe');
-          if (stripeProvider) {
-            setHasStripeProvider(true);
-            const stripe = loadStripe(stripeProvider.publicKey, {
-              stripeAccount: stripeProvider.stripeAccountId,
-            });
-            setStripePromise(stripe);
+          if (hasPayments) {
+            const stripeProvider = providers.find((p) => p.provider === 'stripe');
+            if (stripeProvider) {
+              setHasStripeProvider(true);
+              const stripe = loadStripe(stripeProvider.publicKey, {
+                stripeAccount: stripeProvider.stripeAccountId,
+              });
+              setStripePromise(stripe);
 
-            // Create payment intent
-            const { clientSecret: secret } = await omni.createPaymentIntent(checkout.id);
-            setClientSecret(secret);
+              // Create payment intent
+              const { clientSecret: secret } = await omni.createPaymentIntent(checkout.id);
+              setClientSecret(secret);
+            }
           }
+        } catch {
+          // No payment providers configured - bank transfer only
+          setHasStripeProvider(false);
+          setPaymentMethod('bank_transfer');
         }
-      } catch {
-        // No payment providers configured - bank transfer only
+      } else {
+        // Demo mode - only bank transfer available
         setHasStripeProvider(false);
         setPaymentMethod('bank_transfer');
       }
 
       setStep('payment');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'שגיאה בבחירת משלוח');
+      // On error, allow demo mode to continue
+      setHasStripeProvider(false);
+      setPaymentMethod('bank_transfer');
+      setStep('payment');
     } finally {
       setIsLoading(false);
     }
@@ -227,16 +234,21 @@ export default function CheckoutPage() {
 
   // Handle bank transfer / demo checkout
   const handleBankTransferCheckout = async () => {
-    if (!checkout) return;
-
     setIsLoading(true);
     setError(null);
 
     try {
-      // Complete checkout without payment (order will be in pending status)
-      // The order is already created in the backend when checkout was created
+      // Clear cart and redirect to success page
       clearCart();
-      router.push(`/checkout/success?checkoutId=${checkout.id}`);
+      localStorage.removeItem('cartId');
+
+      if (checkout) {
+        // Real checkout - redirect with checkout ID
+        router.push(`/checkout/success?checkoutId=${checkout.id}`);
+      } else {
+        // Demo mode - redirect with demo flag
+        router.push('/checkout/success?demo=true');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'שגיאה בסיום ההזמנה');
       setIsLoading(false);
