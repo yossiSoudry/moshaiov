@@ -224,34 +224,36 @@ export default function OrdersPage() {
                         >
                           <h4 className="font-semibold mb-3">פריטים בהזמנה</h4>
                           <div className="space-y-3">
-                            {((order as { items?: Array<{ id: string; productName?: string; name?: string; imageUrl?: string; variantName?: string; quantity: number; unitPrice?: number; price?: number }> }).items || []).map((item) => (
+                            {(order.items || []).map((item, itemIndex) => {
+                              const itemData = item as unknown as { id?: string; productName?: string; name?: string; imageUrl?: string; variantName?: string; quantity: number; unitPrice?: number; price?: number };
+                              return (
                               <div
-                                key={item.id}
+                                key={itemData.id || itemIndex}
                                 className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg"
                               >
-                                {item.imageUrl && (
+                                {itemData.imageUrl && (
                                   <img
-                                    src={item.imageUrl}
-                                    alt={item.productName || item.name || ''}
+                                    src={itemData.imageUrl}
+                                    alt={itemData.productName || itemData.name || ''}
                                     className="w-16 h-16 object-cover rounded"
                                   />
                                 )}
                                 <div className="flex-1">
-                                  <p className="font-medium">{item.productName || item.name}</p>
-                                  {item.variantName && (
+                                  <p className="font-medium">{itemData.productName || itemData.name}</p>
+                                  {itemData.variantName && (
                                     <p className="text-sm text-muted-foreground">
-                                      {item.variantName}
+                                      {itemData.variantName}
                                     </p>
                                   )}
                                   <p className="text-sm text-muted-foreground">
-                                    כמות: {item.quantity}
+                                    כמות: {itemData.quantity}
                                   </p>
                                 </div>
                                 <p className="font-semibold">
-                                  {formatPrice((item.unitPrice || item.price || 0) * item.quantity)}
+                                  {formatPrice((itemData.unitPrice || itemData.price || 0) * itemData.quantity)}
                                 </p>
                               </div>
-                            ))}
+                            )})}
                           </div>
 
                           {/* Shipping address */}
