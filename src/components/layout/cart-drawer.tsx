@@ -120,7 +120,7 @@ export function CartDrawer() {
                     asChild
                     className="group bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-primary font-semibold px-8 rounded-full"
                   >
-                    <Link href="/products" className="flex items-center gap-2">
+                    <Link href="/products" prefetch={false} className="flex items-center gap-2">
                       <Sparkles className="h-4 w-4" />
                       לחנות
                       <motion.span
@@ -280,14 +280,14 @@ export function CartDrawer() {
                     onClick={toggleCart}
                     className="border-gold-500/30 hover:border-gold-500 hover:bg-gold-500/5"
                   >
-                    <Link href="/cart">לעגלה המלאה</Link>
+                    <Link href="/cart" prefetch={false}>לעגלה המלאה</Link>
                   </Button>
                   <Button
                     asChild
                     onClick={toggleCart}
                     className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-primary font-semibold"
                   >
-                    <Link href="/checkout">לתשלום</Link>
+                    <Link href="/checkout" prefetch={false}>לתשלום</Link>
                   </Button>
                 </div>
 

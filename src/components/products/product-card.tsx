@@ -104,6 +104,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
     >
       <Link
         href={`/products/${product.slug}`}
+        prefetch={false}
         className="group block"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}

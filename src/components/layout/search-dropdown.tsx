@@ -194,6 +194,7 @@ export function SearchDropdown({ query, onClose }: SearchDropdownProps) {
               >
                 <Link
                   href={`/products/${product.slug}`}
+                  prefetch={false}
                   onClick={onClose}
                   className="group flex gap-4 p-4 hover:bg-white/5 transition-all duration-300 relative overflow-hidden"
                 >
@@ -263,6 +264,7 @@ export function SearchDropdown({ query, onClose }: SearchDropdownProps) {
       >
         <Link
           href={`/products?search=${encodeURIComponent(query)}`}
+          prefetch={false}
           onClick={onClose}
           className="group flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-gold-500/0 via-gold-500/10 to-gold-500/0 hover:via-gold-500/20 border-t border-white/10 transition-all duration-300"
         >
