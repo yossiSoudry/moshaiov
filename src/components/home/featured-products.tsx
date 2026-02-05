@@ -135,7 +135,7 @@ export function FeaturedProducts() {
           asChild
           className="group border-2 border-gold-500/30 hover:border-gold-500 hover:bg-gold-500/5 px-8 py-6 text-base font-medium rounded-full transition-all duration-300"
         >
-          <Link href="/products" className="flex items-center gap-3">
+          <Link href="/products" prefetch={false} className="flex items-center gap-3">
             <span>גלו את כל הקולקציה</span>
             <motion.div
               animate={{ x: [0, -4, 0] }}

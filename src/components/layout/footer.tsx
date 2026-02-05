@@ -101,7 +101,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
           {/* Brand Column - Larger */}
           <div className="lg:col-span-4">
-            <Link href="/" className="inline-block group mb-6">
+            <Link href="/" prefetch={false} className="inline-block group mb-6">
               <div className="flex items-center gap-3">
                 {/* Logo */}
                 <div className="relative">
@@ -185,6 +185,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
+                    prefetch={false}
                     className="group text-sm text-primary-foreground/60 hover:text-gold-400 transition-colors duration-300 flex items-center gap-2"
                   >
                     <span className="w-0 h-px bg-gold-400 group-hover:w-3 transition-all duration-300" />
@@ -206,6 +207,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
+                    prefetch={false}
                     className="group text-sm text-primary-foreground/60 hover:text-gold-400 transition-colors duration-300 flex items-center gap-2"
                   >
                     <span className="w-0 h-px bg-gold-400 group-hover:w-3 transition-all duration-300" />

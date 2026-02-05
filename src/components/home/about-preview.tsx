@@ -252,7 +252,7 @@ export function AboutPreview() {
                 asChild
                 className="group border-2 border-gold-500/30 hover:border-gold-500 hover:bg-gold-500/5 px-8 py-6 text-base font-medium rounded-full transition-all duration-300"
               >
-                <Link href="/about" className="flex items-center gap-3">
+                <Link href="/about" prefetch={false} className="flex items-center gap-3">
                   <span>קרא עוד על מושיוב</span>
                   <motion.div
                     animate={{ x: [0, -4, 0] }}

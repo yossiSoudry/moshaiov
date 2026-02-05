@@ -109,7 +109,7 @@ export function Header() {
   };
 
   const Logo = () => (
-    <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
+    <Link href="/" prefetch={false} className="flex items-center gap-2 sm:gap-3 group">
       <motion.div
         className="relative"
         whileHover={{ scale: 1.05 }}
@@ -290,6 +290,7 @@ export function Header() {
               <Link
                 key={`mobile-link-${idx}`}
                 href={item.link}
+                prefetch={false}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="relative text-white/80 hover:text-white transition-colors text-lg"
               >
