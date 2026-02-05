@@ -135,6 +135,9 @@ export default function ProductPage() {
 
   return (
     <div className="min-h-screen pt-16 lg:pt-20">
+      {/* Dark background behind navbar */}
+      <div className="fixed top-0 left-0 right-0 h-20 lg:h-24 bg-neutral-900 -z-10" />
+
       {/* Breadcrumb */}
       <div className="bg-muted py-4">
         <div className="container mx-auto px-4">
