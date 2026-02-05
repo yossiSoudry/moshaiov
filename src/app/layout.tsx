@@ -9,15 +9,15 @@ import { FlyToCartProvider } from "@/components/ui/fly-to-cart";
 
 const heebo = Heebo({
   variable: "--font-heebo",
-  subsets: ["hebrew", "latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  subsets: ["hebrew"],
+  weight: ["400", "500", "700"],
   display: "swap",
 });
 
 const assistant = Assistant({
   variable: "--font-assistant",
-  subsets: ["hebrew", "latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  subsets: ["hebrew"],
+  weight: ["400", "600"],
   display: "swap",
 });
 

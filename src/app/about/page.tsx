@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Award, Gem, Shield, Heart, Diamond, Sparkles, ArrowLeft, Star, DoorOpen, Crown } from 'lucide-react';
 import { HoverBorderGradient } from '@/components/ui/hover-border-gradient';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 
 const values = [
   {
@@ -46,10 +46,18 @@ export default function AboutPage() {
   const storyRef = useRef<HTMLElement>(null);
   const valuesRef = useRef<HTMLElement>(null);
   const timelineRef = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const storyInView = useInView(storyRef, { once: true, margin: "-100px" });
   const valuesInView = useInView(valuesRef, { once: true, margin: "-100px" });
   const timelineInView = useInView(timelineRef, { once: true, margin: "-100px" });
+
+  // Play video after mount to avoid hydration issues
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, []);
 
   return (
     <div className="overflow-hidden">
@@ -57,11 +65,13 @@ export default function AboutPage() {
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         {/* Background Video */}
         <video
-          autoPlay
+          ref={videoRef}
           loop
           muted
           playsInline
+          preload="metadata"
           className="absolute inset-0 w-full h-full object-cover"
+          suppressHydrationWarning
         >
           <source src="/Cinematic_close_up_shot_of_an.mp4" type="video/mp4" />
         </video>
