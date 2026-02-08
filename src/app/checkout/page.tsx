@@ -271,13 +271,14 @@ export default function CheckoutPage() {
     try {
       if (checkout) {
         // Complete the checkout to create an actual order
-        const result = await omni.completeCheckout(checkout.id);
+        const result = await omni.completeCheckout(checkout.id) as { orderId: string; orderNumber?: string };
 
         // Remove cartId from localStorage
         localStorage.removeItem('cartId');
 
         // Redirect with order info
-        router.push(`/checkout/success?checkoutId=${checkout.id}&orderNumber=${result.orderNumber}`);
+        const orderParam = result.orderNumber ? `&orderNumber=${result.orderNumber}` : '';
+        router.push(`/checkout/success?checkoutId=${checkout.id}${orderParam}`);
       } else {
         // Demo mode - redirect with demo flag
         localStorage.removeItem('cartId');
