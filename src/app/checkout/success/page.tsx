@@ -12,18 +12,20 @@ import { Button } from '@/components/ui/button';
 function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
   const checkoutId = searchParams.get('checkoutId');
+  const orderNumberParam = searchParams.get('orderNumber');
   const isDemo = searchParams.get('demo') === 'true';
   const { clearCart } = useCartStore();
 
-  const [orderNumber, setOrderNumber] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [orderNumber, setOrderNumber] = useState<string | null>(orderNumberParam);
+  const [isLoading, setIsLoading] = useState(!orderNumberParam);
 
   useEffect(() => {
     async function getOrderInfo() {
       // Clear the cart
       clearCart();
 
-      if (isDemo || !checkoutId) {
+      // If we already have order number from URL, don't fetch
+      if (orderNumberParam || isDemo || !checkoutId) {
         setIsLoading(false);
         return;
       }
@@ -43,18 +45,22 @@ function CheckoutSuccessContent() {
     }
 
     getOrderInfo();
-  }, [checkoutId, isDemo, clearCart]);
+  }, [checkoutId, orderNumberParam, isDemo, clearCart]);
 
   if (isLoading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center pt-24">
+        {/* Dark header background for navbar */}
+        <div className="absolute inset-x-0 top-0 h-20 bg-black z-40" />
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center px-4 py-16">
+    <div className="min-h-[60vh] flex items-center justify-center px-4 pt-24 pb-16">
+      {/* Dark header background for navbar */}
+      <div className="absolute inset-x-0 top-0 h-20 bg-black z-40" />
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -141,7 +147,9 @@ export default function CheckoutSuccessPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="min-h-[60vh] flex items-center justify-center pt-24">
+          {/* Dark header background for navbar */}
+          <div className="absolute inset-x-0 top-0 h-20 bg-black z-40" />
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       }

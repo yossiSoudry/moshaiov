@@ -41,7 +41,7 @@ interface ShippingAddress {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cart, clearCart } = useCartStore();
+  const { cart } = useCartStore();
   const { isAuthenticated, customer } = useAuthStore();
 
   const [step, setStep] = useState<CheckoutStep>('info');
@@ -127,6 +127,37 @@ export default function CheckoutPage() {
 
     initCheckout();
   }, [cart]);
+
+  // Load saved customer addresses
+  useEffect(() => {
+    async function loadSavedAddresses() {
+      if (!isAuthenticated) return;
+
+      try {
+        const addresses = await omni.getMyAddresses();
+        if (addresses && addresses.length > 0) {
+          // Find default address or use first one
+          const defaultAddress = addresses.find((a) => a.isDefault) || addresses[0];
+          setAddress((prev) => ({
+            ...prev,
+            firstName: defaultAddress.firstName || prev.firstName,
+            lastName: defaultAddress.lastName || prev.lastName,
+            phone: defaultAddress.phone || prev.phone,
+            line1: defaultAddress.line1 || prev.line1,
+            line2: defaultAddress.line2 || prev.line2,
+            city: defaultAddress.city || prev.city,
+            postalCode: defaultAddress.postalCode || prev.postalCode,
+            country: defaultAddress.country || prev.country,
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to load saved addresses:', err);
+        // Silent fail - user can still enter address manually
+      }
+    }
+
+    loadSavedAddresses();
+  }, [isAuthenticated]);
 
   // Default fallback shipping option for demo/testing
   const fallbackShippingRate = {
@@ -238,15 +269,18 @@ export default function CheckoutPage() {
     setError(null);
 
     try {
-      // Clear cart and redirect to success page
-      clearCart();
-      localStorage.removeItem('cartId');
-
       if (checkout) {
-        // Real checkout - redirect with checkout ID
-        router.push(`/checkout/success?checkoutId=${checkout.id}`);
+        // Complete the checkout to create an actual order
+        const result = await omni.completeCheckout(checkout.id);
+
+        // Remove cartId from localStorage
+        localStorage.removeItem('cartId');
+
+        // Redirect with order info
+        router.push(`/checkout/success?checkoutId=${checkout.id}&orderNumber=${result.orderNumber}`);
       } else {
         // Demo mode - redirect with demo flag
+        localStorage.removeItem('cartId');
         router.push('/checkout/success?demo=true');
       }
     } catch (err) {
@@ -632,8 +666,8 @@ export default function CheckoutPage() {
                 {cart.items.map((item) => {
                   const images = (item.product as { images?: { url: string }[] } | undefined)?.images;
                   return (
-                  <div key={item.id} className="flex gap-3">
-                    <div className="relative w-16 h-16 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+                  <div key={item.id} className="flex gap-3 items-center">
+                    <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden flex-shrink-0">
                       {images?.[0]?.url && (
                         <img
                           src={images[0].url}
@@ -641,9 +675,6 @@ export default function CheckoutPage() {
                           className="w-full h-full object-cover"
                         />
                       )}
-                      <span className="absolute -top-1 -left-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
-                        {item.quantity}
-                      </span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
@@ -655,6 +686,9 @@ export default function CheckoutPage() {
                         </p>
                       )}
                     </div>
+                    <span className="text-sm text-muted-foreground">
+                      x{item.quantity}
+                    </span>
                     <p className="text-sm font-medium">
                       {formatPrice(parseFloat(item.unitPrice || '0') * item.quantity)}
                     </p>

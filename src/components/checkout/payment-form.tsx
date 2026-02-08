@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import { Loader2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useCartStore } from '@/store/cart-store';
 
 interface CheckoutPaymentFormProps {
   checkoutId: string;
@@ -16,7 +15,6 @@ export function CheckoutPaymentForm({ checkoutId, onBack }: CheckoutPaymentFormP
   const router = useRouter();
   const stripe = useStripe();
   const elements = useElements();
-  const { clearCart } = useCartStore();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,8 +51,7 @@ export function CheckoutPaymentForm({ checkoutId, onBack }: CheckoutPaymentFormP
         return;
       }
 
-      // Payment succeeded without redirect
-      clearCart();
+      // Payment succeeded without redirect - cart will be cleared on success page
       router.push(`/checkout/success?checkoutId=${checkoutId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'שגיאה בתשלום');
