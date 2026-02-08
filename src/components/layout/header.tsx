@@ -241,7 +241,7 @@ export function Header() {
       </div>
 
       {/* Cart Button */}
-      <div className="relative" ref={isMounted ? cartIconRef : undefined} suppressHydrationWarning>
+      <div className="relative" ref={cartIconRef} data-cart-icon suppressHydrationWarning>
         <IconButton onClick={toggleCart} ariaLabel="עגלת קניות">
           <CartIcon
             size={18}
