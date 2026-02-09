@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { Heebo } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { CartProvider } from "@/components/providers/cart-provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { FlyToCartProvider } from "@/components/ui/fly-to-cart";
+import { CookieConsent } from "@/components/ui/cookie-consent";
 
 const heebo = Heebo({
   variable: "--font-heebo",
@@ -54,9 +56,17 @@ export default function RootLayout({
               <Header />
               <main className="flex-1">{children}</main>
               <Footer />
+              <CookieConsent />
             </FlyToCartProvider>
           </CartProvider>
         </AuthProvider>
+
+        {/* UserWay Accessibility Widget */}
+        <Script
+          src="https://cdn.userway.org/widget.js"
+          data-account="YOUR_ACCOUNT_ID"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );

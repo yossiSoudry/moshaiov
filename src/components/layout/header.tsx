@@ -128,8 +128,8 @@ export function Header() {
     setIsSearchOpen(true);
   };
 
-  const Logo = () => (
-    <Link href="/" prefetch={false} className="flex items-center gap-2 sm:gap-3 group">
+  const Logo = ({ compact = false }: { compact?: boolean }) => (
+    <Link href="/" prefetch={false} className="flex items-center gap-1.5 sm:gap-3 group">
       <motion.div
         className="relative"
         whileHover={{ scale: 1.05 }}
@@ -140,7 +140,7 @@ export function Header() {
         />
         <svg
           viewBox="0 0 40 40"
-          className="h-8 w-8 sm:h-10 sm:w-10 relative"
+          className={cn("relative", compact ? "h-7 w-7" : "h-8 w-8 sm:h-10 sm:w-10")}
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -174,11 +174,17 @@ export function Header() {
           />
         </svg>
       </motion.div>
-      <div>
-        <h1 className="text-base sm:text-lg lg:text-xl font-bold tracking-wider text-white">
+      <div className={compact ? "hidden xs:block" : ""}>
+        <h1 className={cn(
+          "font-bold tracking-wider text-white",
+          compact ? "text-sm xs:text-base" : "text-base sm:text-lg lg:text-xl"
+        )}>
           MOSHAYOV
         </h1>
-        <p className="text-[9px] sm:text-[10px] lg:text-xs -mt-0.5 tracking-widest text-white/70">
+        <p className={cn(
+          "-mt-0.5 tracking-widest text-white/70",
+          compact ? "text-[8px] xs:text-[9px]" : "text-[9px] sm:text-[10px] lg:text-xs"
+        )}>
           תכשיטי זהב ויהלומים
         </p>
       </div>
@@ -215,7 +221,7 @@ export function Header() {
   );
 
   const ActionButtons = ({ mobile = false }: { mobile?: boolean }) => (
-    <div className={cn("flex items-center", mobile ? "gap-3" : "gap-2")} suppressHydrationWarning>
+    <div className={cn("flex items-center", mobile ? "gap-1 xs:gap-2" : "gap-2")} suppressHydrationWarning>
       {/* Search Button */}
       <IconButton onClick={openSearch} ariaLabel="חיפוש">
         <SearchIcon
@@ -306,9 +312,9 @@ export function Header() {
             </IconButton>
 
             {/* Center - Logo */}
-            <div className="absolute left-1/2 -translate-x-1/2">
+            <div className="absolute left-1/2 -translate-x-1/2 max-w-35 xs:max-w-none">
               <NavbarLogo>
-                <Logo />
+                <Logo compact />
               </NavbarLogo>
             </div>
 
