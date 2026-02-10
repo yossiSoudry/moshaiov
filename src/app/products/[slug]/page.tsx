@@ -2,9 +2,13 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Script from 'next/script';
 import { ProductContent } from './product-content';
-import { omni } from '@/lib/omni-sync';
+
+// Force dynamic rendering - metadata needs fresh data
+export const dynamic = 'force-dynamic';
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://moshayov.co.il';
+const BRAINERCE_API = 'https://api.brainerce.com';
+const CONNECTION_ID = 'vc_tYZpo6sTEQL6y8aWRltQj';
 
 interface ProductData {
   id: string;
@@ -26,15 +30,25 @@ interface ProductData {
 
 async function getProduct(slug: string): Promise<ProductData | null> {
   try {
-    console.log('[Metadata] Fetching product with slug:', slug);
+    // Direct fetch - force dynamic rendering with no-store
+    const response = await fetch(
+      `${BRAINERCE_API}/api/vc/${CONNECTION_ID}/products/slug/${encodeURIComponent(slug)}`,
+      {
+        cache: 'no-store', // Force dynamic - don't cache
+        headers: {
+          'Accept': 'application/json',
+        },
+      }
+    );
 
-    // Use the SDK directly - same as product-content.tsx (no decoding needed)
-    const product = await omni.getProductBySlug(slug);
+    if (!response.ok) {
+      return null;
+    }
 
-    console.log('[Metadata] Product fetched:', product ? product.name : 'null');
-    return product as ProductData;
+    const data = await response.json();
+    return data;
   } catch (error) {
-    console.error('[Metadata] Error fetching product:', error);
+    console.error('Error fetching product for metadata:', error);
     return null;
   }
 }
