@@ -65,7 +65,7 @@ export default function RootLayout({
         <Script
           src="https://cdn.userway.org/widget.js"
           data-account="YOUR_ACCOUNT_ID"
-          data-position="4"
+          data-position="5"
           strategy="lazyOnload"
         />
       </body>
