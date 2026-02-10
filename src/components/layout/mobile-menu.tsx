@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { X, Heart, User, LogOut, Diamond, Sparkles, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -73,7 +74,7 @@ export function MobileMenu({ isOpen, onClose, navLinks }: MobileMenuProps) {
               {/* Background decoration */}
               <div className="absolute inset-0 bg-gradient-to-r from-gold-500/5 to-transparent pointer-events-none" />
 
-              <div className="relative flex items-center gap-3">
+              <div className="relative flex items-center">
                 {/* Logo */}
                 <div className="relative">
                   <motion.div
@@ -101,10 +102,22 @@ export function MobileMenu({ isOpen, onClose, navLinks }: MobileMenuProps) {
                       fill="none"
                     />
                     <path d="M8 16H32" stroke="url(#mobileMenuDiamondGradient)" strokeWidth="2" />
+                    <path
+                      d="M20 4L14 16L20 36L26 16L20 4Z"
+                      stroke="rgba(212,175,55,0.5)"
+                      strokeWidth="1"
+                      fill="none"
+                    />
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold tracking-wider">MOSHAYOV</h2>
+                  <Image
+                    src="/moshayov-text-logo.png"
+                    alt="MOSHAYOV"
+                    width={120}
+                    height={24}
+                    className="h-6 w-auto object-contain"
+                  />
                   <p className="text-xs text-gold-500 tracking-widest">תכשיטי זהב ויהלומים</p>
                 </div>
               </div>

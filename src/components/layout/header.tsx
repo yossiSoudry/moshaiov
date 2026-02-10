@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, User } from 'lucide-react';
@@ -129,7 +130,7 @@ export function Header() {
   };
 
   const Logo = ({ compact = false }: { compact?: boolean }) => (
-    <Link href="/" prefetch={false} className="flex items-center gap-1.5 sm:gap-3 group">
+    <Link href="/" prefetch={false} className="flex items-center group">
       <motion.div
         className="relative"
         whileHover={{ scale: 1.05 }}
@@ -140,50 +141,51 @@ export function Header() {
         />
         <svg
           viewBox="0 0 40 40"
-          className={cn("relative", compact ? "h-7 w-7" : "h-8 w-8 sm:h-10 sm:w-10")}
+          className={cn("relative", compact ? "h-9 w-9" : "h-8 w-8 sm:h-10 sm:w-10")}
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
-            <linearGradient id="diamondGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient id={compact ? "headerDiamondGradientCompact" : "headerDiamondGradient"} x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#b8942e" />
               <stop offset="50%" stopColor="#e8d9a8" />
               <stop offset="100%" stopColor="#b8942e" />
             </linearGradient>
           </defs>
-          <motion.path
+          <path
             d="M20 4L8 16L20 36L32 16L20 4Z"
-            stroke="url(#diamondGradient)"
+            stroke={compact ? "url(#headerDiamondGradientCompact)" : "url(#headerDiamondGradient)"}
             strokeWidth="2"
             fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 2, ease: "easeInOut" }}
           />
           <path
             d="M8 16H32"
-            stroke="url(#diamondGradient)"
+            stroke={compact ? "url(#headerDiamondGradientCompact)" : "url(#headerDiamondGradient)"}
             strokeWidth="2"
           />
           <path
             d="M20 4L14 16L20 36L26 16L20 4Z"
-            stroke="currentColor"
+            stroke="rgba(212,175,55,0.3)"
             strokeWidth="1"
             fill="none"
-            className="text-gold-500/50"
           />
         </svg>
       </motion.div>
       <div>
-        <h1 className={cn(
-          "font-bold tracking-wider text-white",
-          compact ? "text-[11px] xs:text-sm" : "text-base sm:text-lg lg:text-xl"
-        )}>
-          MOSHAYOV
-        </h1>
+        <Image
+          src="/moshayov-text-logo.png"
+          alt="MOSHAYOV"
+          width={compact ? 100 : 160}
+          height={compact ? 20 : 32}
+          className={cn(
+            "object-contain",
+            compact ? "h-[21px] w-auto" : "h-6 sm:h-7 w-auto"
+          )}
+          priority
+        />
         <p className={cn(
           "-mt-0.5 tracking-widest text-white/70",
-          compact ? "text-[7px] xs:text-[8px]" : "text-[9px] sm:text-[10px] lg:text-xs"
+          compact ? "text-[9px]" : "text-[9px] sm:text-[10px] lg:text-xs"
         )}>
           תכשיטי זהב ויהלומים
         </p>
