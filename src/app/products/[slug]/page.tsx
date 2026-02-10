@@ -25,16 +25,29 @@ interface ProductData {
 
 async function getProduct(slug: string): Promise<ProductData | null> {
   try {
+    // Decode the slug in case it's URL-encoded (Hebrew slugs)
+    const decodedSlug = decodeURIComponent(slug);
+
     const response = await fetch(
-      `https://api.brainerce.com/api/vc/vc_tYZpo6sTEQL6y8aWRltQj/products/slug/${slug}`,
+      `https://api.brainerce.com/api/vc/vc_tYZpo6sTEQL6y8aWRltQj/product/slug/${encodeURIComponent(decodedSlug)}`,
       {
         next: { revalidate: 300 }, // Cache for 5 minutes
+        headers: {
+          'Accept': 'application/json',
+        },
       }
     );
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.error(`Product fetch failed: ${response.status} for slug: ${decodedSlug}`);
+      return null;
+    }
 
     const data = await response.json();
+
+    // Handle different response structures
+    if (data?.product) return data.product;
+    if (data?.data) return data.data;
     return data;
   } catch (error) {
     console.error('Error fetching product:', error);
