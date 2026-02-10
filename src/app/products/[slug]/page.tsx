@@ -27,13 +27,16 @@ async function getProduct(slug: string): Promise<ProductData | null> {
   try {
     // Decode the slug in case it's URL-encoded (Hebrew slugs)
     const decodedSlug = decodeURIComponent(slug);
+    const encodedSlug = encodeURIComponent(decodedSlug);
 
+    // Try the products endpoint (plural) - matching the SDK pattern
     const response = await fetch(
-      `https://api.brainerce.com/api/vc/vc_tYZpo6sTEQL6y8aWRltQj/product/slug/${encodeURIComponent(decodedSlug)}`,
+      `https://api.brainerce.com/api/vc/vc_tYZpo6sTEQL6y8aWRltQj/products/slug/${encodedSlug}`,
       {
         next: { revalidate: 300 }, // Cache for 5 minutes
         headers: {
           'Accept': 'application/json',
+          'Content-Type': 'application/json',
         },
       }
     );
