@@ -174,16 +174,16 @@ export function Header() {
           />
         </svg>
       </motion.div>
-      <div className={compact ? "hidden xs:block" : ""}>
+      <div>
         <h1 className={cn(
           "font-bold tracking-wider text-white",
-          compact ? "text-sm xs:text-base" : "text-base sm:text-lg lg:text-xl"
+          compact ? "text-[11px] xs:text-sm" : "text-base sm:text-lg lg:text-xl"
         )}>
           MOSHAYOV
         </h1>
         <p className={cn(
           "-mt-0.5 tracking-widest text-white/70",
-          compact ? "text-[8px] xs:text-[9px]" : "text-[9px] sm:text-[10px] lg:text-xs"
+          compact ? "text-[7px] xs:text-[8px]" : "text-[9px] sm:text-[10px] lg:text-xs"
         )}>
           תכשיטי זהב ויהלומים
         </p>
@@ -284,7 +284,7 @@ export function Header() {
 
         {/* Mobile Navigation */}
         <MobileNav>
-          <MobileNavHeader className="relative">
+          <MobileNavHeader>
             {/* Left side - Hamburger */}
             <IconButton
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -311,14 +311,15 @@ export function Header() {
               )}
             </IconButton>
 
-            {/* Center - Logo */}
-            <div className="absolute left-1/2 -translate-x-1/2 max-w-35 xs:max-w-none">
-              <NavbarLogo>
-                <Logo compact />
-              </NavbarLogo>
-            </div>
+            {/* Logo - next to hamburger */}
+            <NavbarLogo>
+              <Logo compact />
+            </NavbarLogo>
 
-            {/* Right side - Action buttons */}
+            {/* Spacer to push action buttons to the left */}
+            <div className="flex-1" />
+
+            {/* Left side - Action buttons */}
             <ActionButtons mobile />
           </MobileNavHeader>
 
