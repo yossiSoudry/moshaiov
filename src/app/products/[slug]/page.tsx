@@ -1,5 +1,4 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import Script from 'next/script';
 import { ProductContent } from './product-content';
 
@@ -29,9 +28,7 @@ interface ProductData {
 }
 
 async function getProduct(slug: string): Promise<ProductData | null> {
-  // Don't use encodeURIComponent - slug is already URL-encoded from Next.js params
   const url = `${BRAINERCE_API}/api/vc/${CONNECTION_ID}/products/slug/${slug}`;
-  console.log('[Metadata] Fetching:', url);
 
   try {
     const response = await fetch(url, {
@@ -42,19 +39,12 @@ async function getProduct(slug: string): Promise<ProductData | null> {
       },
     });
 
-    console.log('[Metadata] Response status:', response.status);
-
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Metadata] Response error:', errorText);
       return null;
     }
 
-    const data = await response.json();
-    console.log('[Metadata] Product name:', data?.name || 'NO NAME');
-    return data;
-  } catch (error) {
-    console.error('[Metadata] Fetch error:', error);
+    return await response.json();
+  } catch {
     return null;
   }
 }
