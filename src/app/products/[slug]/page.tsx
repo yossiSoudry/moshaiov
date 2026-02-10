@@ -26,14 +26,15 @@ interface ProductData {
 
 async function getProduct(slug: string): Promise<ProductData | null> {
   try {
-    // Decode the slug in case it's URL-encoded (Hebrew slugs)
-    const decodedSlug = decodeURIComponent(slug);
+    console.log('[Metadata] Fetching product with slug:', slug);
 
-    // Use the SDK directly - same as product-content.tsx
-    const product = await omni.getProductBySlug(decodedSlug);
+    // Use the SDK directly - same as product-content.tsx (no decoding needed)
+    const product = await omni.getProductBySlug(slug);
+
+    console.log('[Metadata] Product fetched:', product ? product.name : 'null');
     return product as ProductData;
   } catch (error) {
-    console.error('Error fetching product:', error);
+    console.error('[Metadata] Error fetching product:', error);
     return null;
   }
 }
