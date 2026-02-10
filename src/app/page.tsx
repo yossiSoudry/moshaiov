@@ -55,7 +55,7 @@ export default function HomePage() {
 
             <p className="text-muted-foreground max-w-2xl mx-auto text-lg leading-relaxed">
               תכשיטים נבחרים מהקולקציה שלנו - כל פריט מעוצב ומיוצר בקפידה ובאהבה,
-              <span className="text-gold-500"> ליצירת רגעים בלתי נשכחים</span>
+              <span className="text-gold-700 font-medium"> ליצירת רגעים בלתי נשכחים</span>
             </p>
 
             {/* Decorative line */}
