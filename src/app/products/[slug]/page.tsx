@@ -29,7 +29,8 @@ interface ProductData {
 }
 
 async function getProduct(slug: string): Promise<ProductData | null> {
-  const url = `${BRAINERCE_API}/api/vc/${CONNECTION_ID}/products/slug/${encodeURIComponent(slug)}`;
+  // Don't use encodeURIComponent - slug is already URL-encoded from Next.js params
+  const url = `${BRAINERCE_API}/api/vc/${CONNECTION_ID}/products/slug/${slug}`;
   console.log('[Metadata] Fetching:', url);
 
   try {
