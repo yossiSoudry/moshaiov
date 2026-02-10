@@ -29,27 +29,31 @@ interface ProductData {
 }
 
 async function getProduct(slug: string): Promise<ProductData | null> {
+  const url = `${BRAINERCE_API}/api/vc/${CONNECTION_ID}/products/slug/${encodeURIComponent(slug)}`;
+  console.log('[Metadata] Fetching:', url);
+
   try {
-    // Direct fetch - force dynamic rendering with no-store
-    const response = await fetch(
-      `${BRAINERCE_API}/api/vc/${CONNECTION_ID}/products/slug/${encodeURIComponent(slug)}`,
-      {
-        cache: 'no-store', // Force dynamic - don't cache
-        headers: {
-          'Accept': 'application/json',
-          'Origin': baseUrl, // Required by the API
-        },
-      }
-    );
+    const response = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Accept': 'application/json',
+        'Origin': baseUrl,
+      },
+    });
+
+    console.log('[Metadata] Response status:', response.status);
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Metadata] Response error:', errorText);
       return null;
     }
 
     const data = await response.json();
+    console.log('[Metadata] Product name:', data?.name || 'NO NAME');
     return data;
   } catch (error) {
-    console.error('Error fetching product for metadata:', error);
+    console.error('[Metadata] Fetch error:', error);
     return null;
   }
 }
