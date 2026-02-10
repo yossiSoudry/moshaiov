@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Script from 'next/script';
 import { ProductContent } from './product-content';
+import { omni } from '@/lib/omni-sync';
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://moshayov.co.il';
 
@@ -27,31 +28,10 @@ async function getProduct(slug: string): Promise<ProductData | null> {
   try {
     // Decode the slug in case it's URL-encoded (Hebrew slugs)
     const decodedSlug = decodeURIComponent(slug);
-    const encodedSlug = encodeURIComponent(decodedSlug);
 
-    // Try the products endpoint (plural) - matching the SDK pattern
-    const response = await fetch(
-      `https://api.brainerce.com/api/vc/vc_tYZpo6sTEQL6y8aWRltQj/products/slug/${encodedSlug}`,
-      {
-        next: { revalidate: 300 }, // Cache for 5 minutes
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    if (!response.ok) {
-      console.error(`Product fetch failed: ${response.status} for slug: ${decodedSlug}`);
-      return null;
-    }
-
-    const data = await response.json();
-
-    // Handle different response structures
-    if (data?.product) return data.product;
-    if (data?.data) return data.data;
-    return data;
+    // Use the SDK directly - same as product-content.tsx
+    const product = await omni.getProductBySlug(decodedSlug);
+    return product as ProductData;
   } catch (error) {
     console.error('Error fetching product:', error);
     return null;
