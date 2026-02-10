@@ -37,6 +37,7 @@ async function getProduct(slug: string): Promise<ProductData | null> {
         cache: 'no-store', // Force dynamic - don't cache
         headers: {
           'Accept': 'application/json',
+          'Origin': baseUrl, // Required by the API
         },
       }
     );
