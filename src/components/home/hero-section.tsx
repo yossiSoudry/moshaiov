@@ -18,15 +18,17 @@ export function HeroSection() {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden" dir="rtl">
-      {/* Background Video */}
+      {/* Background Video - lazy loaded for better LCP */}
       <video
         ref={videoRef}
         loop
         muted
         playsInline
-        preload="metadata"
+        preload="none"
+        poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080'%3E%3Crect fill='%230a0a0a'/%3E%3C/svg%3E"
         className="absolute inset-0 w-full h-full object-cover"
         suppressHydrationWarning
+        aria-hidden="true"
       >
         <source src="/Cinematic_close_up_shot_of_an.mp4" type="video/mp4" />
       </video>

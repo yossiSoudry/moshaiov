@@ -307,7 +307,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
               </div>
               <span className={cn(
                 "text-xs sm:text-sm",
-                isLight ? "text-neutral-400" : "text-white/50"
+                isLight ? "text-neutral-500" : "text-white/60"
               )}>({reviewCount})</span>
             </div>
 
@@ -321,7 +321,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
                 {productWithPrice.salePrice && productWithPrice.basePrice && productWithPrice.basePrice > productWithPrice.salePrice && (
                   <span className={cn(
                     "text-xs sm:text-sm line-through",
-                    isLight ? "text-neutral-400" : "text-white/50"
+                    isLight ? "text-neutral-500" : "text-white/60"
                   )}>
                     {formatPrice(productWithPrice.basePrice)}
                   </span>
@@ -333,6 +333,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
                   size="sm"
                   onClick={handleAddToCart}
                   disabled={isLoading}
+                  aria-label={`הוסף ${product.name} לעגלה`}
                   className="rounded-full p-2 sm:px-5 sm:py-2 text-sm font-medium bg-black hover:bg-black/80 text-gold-400 shadow-lg border border-gold-500/30"
                 >
                   <ShoppingBag className="h-4 w-4 sm:me-1.5" />
@@ -344,6 +345,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
                 <Button
                   size="sm"
                   variant="outline"
+                  aria-label={`בחר אפשרות עבור ${product.name}`}
                   className={cn(
                     "rounded-full p-2 sm:px-5 sm:py-2 text-sm font-medium border-gold-500/30 hover:border-gold-500 hover:bg-gold-500/10",
                     isLight ? "text-neutral-700" : "text-white"

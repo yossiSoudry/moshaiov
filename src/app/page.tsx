@@ -42,8 +42,8 @@ export default function HomePage() {
           <div className="text-center mb-16">
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-5 py-2 bg-gold-500/10 border border-gold-500/20 rounded-full mb-6">
-              <Sparkles className="w-4 h-4 text-gold-500" />
-              <span className="text-sm font-medium text-gold-600">הנבחרים שלנו</span>
+              <Sparkles className="w-4 h-4 text-gold-600" />
+              <span className="text-sm font-medium text-gold-700">הנבחרים שלנו</span>
             </div>
 
             <h2 className="text-4xl lg:text-5xl font-bold mb-5 tracking-tight">
