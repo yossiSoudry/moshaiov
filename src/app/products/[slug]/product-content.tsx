@@ -158,24 +158,26 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
   }
 
   return (
-    <div className="min-h-screen pt-24 lg:pt-28">
-      {/* Breadcrumb */}
-      <div className="bg-muted py-4">
+    <div className="min-h-screen">
+      {/* Dark header section */}
+      <div className="bg-neutral-950 pt-28 lg:pt-36 pb-4">
+        {/* Breadcrumb */}
         <div className="container mx-auto px-4">
-          <nav className="flex items-center gap-2 text-sm">
-            <Link href="/" className="text-muted-foreground hover:text-foreground">
+          <nav className="flex items-center gap-2 text-sm text-white/70">
+            <Link href="/" className="hover:text-white transition-colors">
               ראשי
             </Link>
-            <ChevronRight className="h-4 w-4 text-muted-foreground rotate-180" />
-            <Link href="/products" className="text-muted-foreground hover:text-foreground">
+            <ChevronRight className="h-4 w-4 rotate-180" />
+            <Link href="/products" className="hover:text-white transition-colors">
               מוצרים
             </Link>
-            <ChevronRight className="h-4 w-4 text-muted-foreground rotate-180" />
-            <span className="font-medium truncate">{product.name}</span>
+            <ChevronRight className="h-4 w-4 rotate-180" />
+            <span className="text-gold-400 font-medium truncate">{product.name}</span>
           </nav>
         </div>
       </div>
 
+      {/* Product content */}
       <div className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Images */}
