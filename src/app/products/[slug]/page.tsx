@@ -78,7 +78,7 @@ export async function generateMetadata({
       url: `${baseUrl}/products/${slug}`,
       siteName: 'מושיוב - תכשיטי זהב ויהלומים',
       locale: 'he_IL',
-      type: 'website',
+      type: 'article',
       images: imageUrl
         ? [
             {
@@ -209,43 +209,22 @@ export default async function ProductPage({
 
       {/* SSR Product Content for SEO - visible to crawlers */}
       {product && (
-        <article
-          itemScope
-          itemType="https://schema.org/Product"
-          className="sr-only"
-          aria-hidden="true"
-        >
-          <h1 itemProp="name">{product.name}</h1>
-          {product.description && (
-            <p itemProp="description">{product.description}</p>
-          )}
-          {category && <span itemProp="category">{category}</span>}
-          <div itemProp="brand" itemScope itemType="https://schema.org/Brand">
-            <span itemProp="name">מושיוב</span>
-          </div>
+        <article className="sr-only">
+          <h1>{product.name}</h1>
+          {product.description && <p>{product.description}</p>}
+          {category && <span>{category}</span>}
+          <span>מושיוב</span>
           {imageUrl && (
             <Image
               src={imageUrl}
               alt={product.name}
-              itemProp="image"
               width={800}
               height={800}
               unoptimized
             />
           )}
-          <div itemProp="offers" itemScope itemType="https://schema.org/Offer">
-            <span itemProp="priceCurrency">ILS</span>
-            <span itemProp="price">{price}</span>
-            <span itemProp="priceValidUntil">
-              {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-            </span>
-            <link
-              itemProp="availability"
-              href={inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'}
-            />
-            <span>{inStock ? 'במלאי' : 'אזל מהמלאי'}</span>
-            <span>{formatPrice(price)}</span>
-          </div>
+          <span>מחיר: {formatPrice(price)}</span>
+          <span>{inStock ? 'במלאי' : 'אזל מהמלאי'}</span>
         </article>
       )}
 
