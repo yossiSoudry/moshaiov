@@ -11,25 +11,25 @@ const features = [
   {
     icon: Award,
     title: 'מומחיות',
-    description: 'למעלה מ-40 שנות ניסיון בעיצוב ויצירת תכשיטים',
+    description: '30 שנות ניסיון בתעשיית היהלומים',
     color: 'from-silver-400 to-gold-400',
   },
   {
     icon: Gem,
     title: 'איכות',
-    description: 'רק זהב אמיתי ויהלומים מוסמכים',
+    description: 'ייצור ישיר מהבורסה ליהלומים',
     color: 'from-silver-400 to-gold-400',
   },
   {
     icon: Shield,
-    title: 'אחריות',
-    description: 'אחריות מלאה על כל תכשיט',
+    title: 'שקיפות',
+    description: 'ידע עמוק ושקיפות מלאה',
     color: 'from-silver-400 to-gold-400',
   },
   {
     icon: Heart,
-    title: 'שירות',
-    description: 'שירות אישי וייעוץ מקצועי',
+    title: 'מסורת',
+    description: 'עסק משפחתי שעובר מדור לדור',
     color: 'from-silver-400 to-gold-400',
   },
 ];
@@ -126,7 +126,7 @@ export function AboutPreview() {
                       <Diamond className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-foreground">40+</div>
+                      <div className="text-2xl font-bold text-foreground">30</div>
                       <div className="text-xs text-muted-foreground">שנות מומחיות</div>
                     </div>
                   </div>
@@ -197,9 +197,9 @@ export function AboutPreview() {
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.6, delay: 0.4 }}
               >
-                מושיוב הוקמה בשנת <span className="text-gold-500 font-semibold">1985</span> מתוך אהבה לאומנות עתיקה של יצירת תכשיטים.
-                אנו מאמינים שכל תכשיט מספר סיפור - סיפור של אהבה, של רגעים מיוחדים,
-                ושל מסורת שעוברת מדור לדור.
+                מושיוב יהלומים ותכשיטים הוא עסק משפחתי שנולד מתוך עומק תעשיית היהלומים.
+                הסיפור שלנו מתחיל בשנת <span className="text-gold-500 font-semibold">1995</span>, כאשר משיח מושיוב הגיע לישראל מניו־יורק
+                ונכנס לעולם ייצור היהלומים – מרכישת יהלום גלם ועד ליהלום מלוטש ומושלם.
               </motion.p>
               <motion.p
                 className="text-muted-foreground text-lg leading-relaxed"
@@ -207,9 +207,8 @@ export function AboutPreview() {
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.6, delay: 0.5 }}
               >
-                כל תכשיט בחנות שלנו עובר בדיקות איכות קפדניות ומיוצר מחומרים
-                משובחים בלבד. אנו גאים בשירות האישי שאנו מעניקים ללקוחותינו ובמחויבות
-                שלנו למצוינות.
+                בשנת 2024 נפתחה החנות המרכזית ברחוב רבי עקיבא 113, בני ברק, המשלבת ניסיון של עשרות שנים,
+                שקיפות מלאה ושירות אישי. אנו מאמינים ביופי שנוצר מתוך ידע, מקצועיות ואמון.
               </motion.p>
             </div>
 
