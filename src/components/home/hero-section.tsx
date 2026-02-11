@@ -70,7 +70,7 @@ export function HeroSection() {
           className="inline-flex items-center gap-2 px-5 py-2 bg-gold-500/20 border border-gold-500/30 rounded-full mb-8"
         >
           <Crown className="w-4 h-4 text-gold-400" />
-          <span className="text-sm font-medium text-gold-300">תכשיטי יוקרה מאז 1985</span>
+          <span className="text-sm font-medium text-gold-300">תכשיטי יוקרה מאז 1995</span>
         </div>
 
         <h1

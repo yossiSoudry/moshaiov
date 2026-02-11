@@ -272,7 +272,7 @@ export function MobileMenu({ isOpen, onClose, navLinks }: MobileMenuProps) {
               {/* Trust badge */}
               <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-border/30">
                 <Diamond className="h-3 w-3 text-gold-500" />
-                <span className="text-xs text-muted-foreground">תכשיטים יוקרתיים מאז 1985</span>
+                <span className="text-xs text-muted-foreground">תכשיטים יוקרתיים מאז 1995</span>
                 <Diamond className="h-3 w-3 text-gold-500" />
               </div>
             </motion.div>
