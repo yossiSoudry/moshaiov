@@ -22,16 +22,37 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import type { Product, ProductVariant } from 'omni-sync-sdk';
 
-interface ProductContentProps {
+interface InitialProductData {
+  id: string;
+  name: string;
   slug: string;
+  description?: string;
+  basePrice?: number;
+  salePrice?: number | null;
+  images?: { url: string }[];
+  categories?: { name?: string; slug?: string }[];
+  inventory?: {
+    trackingMode?: string;
+    available?: number;
+    inStock?: boolean;
+  };
+  sku?: string;
+  brand?: string;
 }
 
-export function ProductContent({ slug }: ProductContentProps) {
-  const [product, setProduct] = useState<Product | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+interface ProductContentProps {
+  slug: string;
+  initialProduct?: InitialProductData | null;
+}
+
+export function ProductContent({ slug, initialProduct }: ProductContentProps) {
+  const [product, setProduct] = useState<Product | null>(initialProduct as Product | null);
+  const [isLoading, setIsLoading] = useState(!initialProduct);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
+    (initialProduct as Product | null)?.variants?.[0] ?? null
+  );
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
 
@@ -40,7 +61,10 @@ export function ProductContent({ slug }: ProductContentProps) {
   useEffect(() => {
     async function fetchProduct() {
       try {
-        setIsLoading(true);
+        // Only show loading if we don't have initial data
+        if (!initialProduct) {
+          setIsLoading(true);
+        }
         const data = await omni.getProductBySlug(slug);
         setProduct(data);
 
@@ -49,14 +73,17 @@ export function ProductContent({ slug }: ProductContentProps) {
           setSelectedVariant(data.variants[0]);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'המוצר לא נמצא');
+        // Only show error if we don't have initial data
+        if (!initialProduct) {
+          setError(err instanceof Error ? err.message : 'המוצר לא נמצא');
+        }
       } finally {
         setIsLoading(false);
       }
     }
 
     fetchProduct();
-  }, [slug]);
+  }, [slug, initialProduct]);
 
   const handleAddToCart = async () => {
     if (!product) return;

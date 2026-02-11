@@ -192,7 +192,7 @@ export default async function ProductPage({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
         />
       )}
-      <ProductContent slug={slug} />
+      <ProductContent slug={slug} initialProduct={product} />
     </>
   );
 }
