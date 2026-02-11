@@ -56,8 +56,6 @@ export function Header() {
     return pathname.startsWith(link);
   };
 
-  // Check if we're on a product page (needs always visible header)
-  const isProductPage = isMounted && pathname.startsWith('/products/') && pathname !== '/products';
 
   // Handle hydration - only show auth state after mount
   useEffect(() => {
@@ -277,7 +275,7 @@ export function Header() {
 
   return (
     <>
-      <Navbar alwaysVisible={isProductPage}>
+      <Navbar>
         {/* Desktop Navigation */}
         <NavBody>
           <NavbarLogo>
