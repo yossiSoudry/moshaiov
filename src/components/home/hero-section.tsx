@@ -18,15 +18,17 @@ export function HeroSection() {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden" dir="rtl">
-      {/* Background Video */}
+      {/* Background Video - lazy loaded for better LCP */}
       <video
         ref={videoRef}
         loop
         muted
         playsInline
-        preload="metadata"
+        preload="none"
+        poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080'%3E%3Crect fill='%230a0a0a'/%3E%3C/svg%3E"
         className="absolute inset-0 w-full h-full object-cover"
         suppressHydrationWarning
+        aria-hidden="true"
       >
         <source src="/Cinematic_close_up_shot_of_an.mp4" type="video/mp4" />
       </video>
@@ -35,9 +37,9 @@ export function HeroSection() {
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.15),transparent_70%)]" />
 
-      {/* Floating particles */}
+      {/* Floating particles - reduced for performance */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {[...Array(6)].map((_, i) => (
+        {[...Array(3)].map((_, i) => (
           <motion.div
             key={i}
             className="absolute"
@@ -64,35 +66,27 @@ export function HeroSection() {
       {/* Content */}
       <div className="relative z-10 text-center text-white px-4 max-w-4xl mx-auto">
         {/* Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div
           className="inline-flex items-center gap-2 px-5 py-2 bg-gold-500/20 border border-gold-500/30 rounded-full mb-8"
         >
           <Crown className="w-4 h-4 text-gold-400" />
           <span className="text-sm font-medium text-gold-300">תכשיטי יוקרה מאז 1985</span>
-        </motion.div>
+        </div>
 
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+        <h1
           className="text-5xl lg:text-7xl font-bold mb-6 leading-tight"
         >
           <span>תכשיטים שמספרים </span>
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-300 to-gold-500">
             סיפור
           </span>
-        </motion.h1>
+        </h1>
 
-        <motion.p
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+        <p
           className="text-xl lg:text-2xl text-white/70 max-w-2xl mx-auto leading-relaxed mb-10"
         >
           קולקציית תכשיטי זהב ויהלומים יוקרתיים, בעבודת יד מקצועית ובאיכות ללא פשרות
-        </motion.p>
+        </p>
 
         {/* Decorative line */}
         <motion.div

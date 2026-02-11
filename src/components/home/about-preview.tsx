@@ -179,8 +179,8 @@ export function AboutPreview() {
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.6, delay: 0.3 }}
             >
-              <Sparkles className="w-4 h-4 text-gold-500" />
-              <span className="text-sm font-medium text-gold-600">אודותינו</span>
+              <Sparkles className="w-4 h-4 text-gold-600" />
+              <span className="text-sm font-medium text-gold-700">אודותינו</span>
             </motion.div>
 
             <h2 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
@@ -228,7 +228,7 @@ export function AboutPreview() {
                     <feature.icon className="h-6 w-6 text-primary" />
                   </div>
 
-                  <h4 className="font-bold text-foreground mb-1">{feature.title}</h4>
+                  <h3 className="font-bold text-foreground mb-1 text-base">{feature.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {feature.description}
                   </p>

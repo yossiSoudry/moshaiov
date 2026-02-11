@@ -211,9 +211,9 @@ export function ContactCTA() {
                   </div>
 
                   {/* Content */}
-                  <h4 className="font-bold text-primary-foreground mb-2 text-lg relative">
+                  <h3 className="font-bold text-primary-foreground mb-2 text-lg relative">
                     {item.title}
-                  </h4>
+                  </h3>
                   {item.href ? (
                     <a
                       href={item.href}

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
   MapPin,
@@ -102,7 +103,7 @@ export function Footer() {
           {/* Brand Column - Larger */}
           <div className="lg:col-span-4">
             <Link href="/" prefetch={false} className="inline-block group mb-6">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center">
                 {/* Logo */}
                 <div className="relative">
                   <motion.div
@@ -141,9 +142,13 @@ export function Footer() {
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold tracking-wider bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
-                    MOSHAYOV
-                  </h2>
+                  <Image
+                    src="/moshayov-text-logo.png"
+                    alt="MOSHAYOV"
+                    width={140}
+                    height={28}
+                    className="h-7 w-auto object-contain"
+                  />
                   <p className="text-xs text-gold-400 tracking-widest">תכשיטי זהב ויהלומים</p>
                 </div>
               </div>

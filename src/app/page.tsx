@@ -42,8 +42,8 @@ export default function HomePage() {
           <div className="text-center mb-16">
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-5 py-2 bg-gold-500/10 border border-gold-500/20 rounded-full mb-6">
-              <Sparkles className="w-4 h-4 text-gold-500" />
-              <span className="text-sm font-medium text-gold-600">הנבחרים שלנו</span>
+              <Sparkles className="w-4 h-4 text-gold-600" />
+              <span className="text-sm font-medium text-gold-700">הנבחרים שלנו</span>
             </div>
 
             <h2 className="text-4xl lg:text-5xl font-bold mb-5 tracking-tight">
@@ -55,7 +55,7 @@ export default function HomePage() {
 
             <p className="text-muted-foreground max-w-2xl mx-auto text-lg leading-relaxed">
               תכשיטים נבחרים מהקולקציה שלנו - כל פריט מעוצב ומיוצר בקפידה ובאהבה,
-              <span className="text-gold-500"> ליצירת רגעים בלתי נשכחים</span>
+              <span className="text-gold-700 font-medium"> ליצירת רגעים בלתי נשכחים</span>
             </p>
 
             {/* Decorative line */}
