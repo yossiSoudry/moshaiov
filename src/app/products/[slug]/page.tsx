@@ -78,7 +78,7 @@ export async function generateMetadata({
       url: `${baseUrl}/products/${slug}`,
       siteName: 'מושיוב - תכשיטי זהב ויהלומים',
       locale: 'he_IL',
-      type: 'article',
+      type: 'website' as const,
       images: imageUrl
         ? [
             {
@@ -100,6 +100,7 @@ export async function generateMetadata({
       canonical: `${baseUrl}/products/${slug}`,
     },
     other: {
+      'og:type': 'product',
       'product:price:amount': price.toString(),
       'product:price:currency': 'ILS',
     },
