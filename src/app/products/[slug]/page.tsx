@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import Script from 'next/script';
+import Image from 'next/image';
 import { ProductContent } from './product-content';
 
 // Force dynamic rendering - metadata needs fresh data
@@ -106,6 +106,14 @@ export async function generateMetadata({
   };
 }
 
+function formatPrice(price: number): string {
+  return new Intl.NumberFormat('he-IL', {
+    style: 'currency',
+    currency: 'ILS',
+    minimumFractionDigits: 0,
+  }).format(price);
+}
+
 export default async function ProductPage({
   params,
 }: {
@@ -176,22 +184,72 @@ export default async function ProductPage({
       }
     : null;
 
+  const price = product?.salePrice ?? product?.basePrice ?? 0;
+  const imageUrl = product?.images?.[0]?.url;
+  const category = product?.categories?.[0]?.name;
+  const inStock = product?.inventory?.inStock !== false &&
+    (product?.inventory?.trackingMode === 'UNLIMITED' ||
+      (product?.inventory?.available ?? 0) > 0);
+
   return (
     <>
+      {/* JSON-LD Scripts - using regular script tags for SSR */}
       {jsonLd && (
-        <Script
-          id="product-jsonld"
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       )}
       {breadcrumbJsonLd && (
-        <Script
-          id="breadcrumb-jsonld"
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
         />
       )}
+
+      {/* SSR Product Content for SEO - visible to crawlers */}
+      {product && (
+        <article
+          itemScope
+          itemType="https://schema.org/Product"
+          className="sr-only"
+          aria-hidden="true"
+        >
+          <h1 itemProp="name">{product.name}</h1>
+          {product.description && (
+            <p itemProp="description">{product.description}</p>
+          )}
+          {category && <span itemProp="category">{category}</span>}
+          <div itemProp="brand" itemScope itemType="https://schema.org/Brand">
+            <span itemProp="name">מושיוב</span>
+          </div>
+          {imageUrl && (
+            <Image
+              src={imageUrl}
+              alt={product.name}
+              itemProp="image"
+              width={800}
+              height={800}
+              unoptimized
+            />
+          )}
+          <div itemProp="offers" itemScope itemType="https://schema.org/Offer">
+            <span itemProp="priceCurrency">ILS</span>
+            <span itemProp="price">{price}</span>
+            <span itemProp="priceValidUntil">
+              {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+            </span>
+            <link
+              itemProp="availability"
+              href={inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'}
+            />
+            <span>{inStock ? 'במלאי' : 'אזל מהמלאי'}</span>
+            <span>{formatPrice(price)}</span>
+          </div>
+        </article>
+      )}
+
+      {/* Interactive Product Content */}
       <ProductContent slug={slug} initialProduct={product} />
     </>
   );
