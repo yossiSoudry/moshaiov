@@ -13,7 +13,7 @@ async function fetchWithRetry(url: string, retries = MAX_RETRIES): Promise<Respo
           'Content-Type': 'application/json',
           'Origin': 'https://moshaiov.co.il',
         },
-        next: { revalidate: 300 }, // Cache for 5 minutes
+        cache: 'no-store',
       });
 
       if (response.ok) {
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
     return NextResponse.json(data, {
       headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
     });
   } catch (error) {
