@@ -11,6 +11,7 @@ async function fetchWithRetry(url: string, retries = MAX_RETRIES): Promise<Respo
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
+          'Origin': 'https://moshaiov.co.il',
         },
         next: { revalidate: 300 }, // Cache for 5 minutes
       });
