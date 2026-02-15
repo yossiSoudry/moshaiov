@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, useRef } from 'react';
+import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -11,6 +11,7 @@ import {
   Diamond,
   Sparkles,
   X,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProductCard } from '@/components/products/product-card';
@@ -30,6 +31,8 @@ import {
 } from '@/components/animate-ui/components/animate/tabs';
 import type { Product } from 'omni-sync-sdk';
 
+const PRODUCTS_PER_PAGE = 50;
+
 // Category slug to Hebrew name mapping
 const CATEGORY_MAP: Record<string, string> = {
   rings: 'טבעות',
@@ -47,32 +50,90 @@ function ProductsContentInner() {
 
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState(initialSearch);
   const [category, setCategory] = useState(initialCategory);
   const [sortBy, setSortBy] = useState('newest');
   const [gridCols, setGridCols] = useState<2 | 3 | 4>(3);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
-
-  // Load all products once on mount
-  useEffect(() => {
-    async function fetchAllProducts() {
-      try {
+  // Fetch products with pagination
+  const fetchProducts = useCallback(async (page: number, reset: boolean = false) => {
+    try {
+      if (page === 1) {
         setIsLoading(true);
-        const res = await fetch(`/api/products?limit=200`);
-        if (!res.ok) throw new Error('Failed to fetch products');
-        const response = await res.json();
-        setAllProducts(response.data || []);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'שגיאה בטעינת המוצרים');
-      } finally {
-        setIsLoading(false);
+      } else {
+        setIsLoadingMore(true);
       }
+
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: PRODUCTS_PER_PAGE.toString(),
+      });
+
+      if (search) {
+        params.set('search', search);
+      }
+
+      const res = await fetch(`/api/products?${params.toString()}`);
+      if (!res.ok) throw new Error('Failed to fetch products');
+      const response = await res.json();
+
+      const newProducts = response.data || [];
+      const meta = response.meta || { page: 1, totalPages: 1 };
+
+      if (reset || page === 1) {
+        setAllProducts(newProducts);
+      } else {
+        setAllProducts((prev) => [...prev, ...newProducts]);
+      }
+
+      setCurrentPage(meta.page || page);
+      setTotalPages(meta.totalPages || 1);
+      setHasMore(page < (meta.totalPages || 1));
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'שגיאה בטעינת המוצרים');
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
     }
-    fetchAllProducts();
-  }, []);
+  }, [search]);
+
+  // Load initial products
+  useEffect(() => {
+    fetchProducts(1, true);
+  }, [fetchProducts]);
+
+  // Load more products when scrolling near bottom
+  const loadMore = useCallback(() => {
+    if (!isLoadingMore && hasMore && !isLoading) {
+      fetchProducts(currentPage + 1);
+    }
+  }, [isLoadingMore, hasMore, isLoading, currentPage, fetchProducts]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoadingMore && !isLoading) {
+          loadMore();
+        }
+      },
+      { rootMargin: '200px' } // Start loading 200px before reaching the end
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [loadMore, hasMore, isLoadingMore, isLoading]);
 
   const handleSearchInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
@@ -432,8 +493,22 @@ function ProductsContentInner() {
           </AnimatePresence>
         )}
 
+        {/* Infinite scroll trigger */}
+        <div ref={loadMoreRef} className="h-1" />
+
+        {/* Loading more indicator */}
+        {isLoadingMore && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center justify-center py-8"
+          >
+            <Loader2 className="h-8 w-8 animate-spin text-gold-500" />
+          </motion.div>
+        )}
+
         {/* End of results */}
-        {!isLoading && !error && sortedProducts.length > 0 && (
+        {!isLoading && !error && sortedProducts.length > 0 && !hasMore && (
           <motion.div
             key={`footer-${category}`}
             initial={{ opacity: 0 }}
@@ -450,6 +525,20 @@ function ProductsContentInner() {
               סה״כ {sortedProducts.length} מוצרים
             </p>
           </motion.div>
+        )}
+
+        {/* Show load more button as fallback */}
+        {!isLoading && !isLoadingMore && hasMore && sortedProducts.length > 0 && (
+          <div className="text-center py-8">
+            <Button
+              variant="outline"
+              onClick={loadMore}
+              className="border-gold-500/30 hover:border-gold-500 hover:bg-gold-500/5 text-white"
+            >
+              <Diamond className="h-4 w-4 me-2 text-gold-500" />
+              טען עוד מוצרים
+            </Button>
+          </div>
         )}
       </div>
     </div>

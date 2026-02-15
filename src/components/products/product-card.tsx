@@ -49,19 +49,23 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
 
   const isLight = variant === 'light';
 
-  const productWithPrice = product as unknown as { basePrice?: number; salePrice?: number | null };
+  const productWithPrice = product as unknown as { basePrice?: number; salePrice?: number | null; price?: number };
   const variants = product.variants || [];
   const hasVariants = variants.length > 0;
   const prices = hasVariants
-    ? variants.map((v) => (v as unknown as { salePrice?: number | null; basePrice?: number }).salePrice ?? (v as unknown as { basePrice?: number }).basePrice ?? 0).filter((p): p is number => p != null)
-    : [productWithPrice.salePrice ?? productWithPrice.basePrice ?? 0];
+    ? variants.map((v) => {
+        const variant = v as unknown as { price?: number; salePrice?: number | null; basePrice?: number };
+        return variant.price ?? variant.salePrice ?? variant.basePrice ?? 0;
+      }).filter((p): p is number => p != null && p > 0)
+    : [productWithPrice.salePrice ?? productWithPrice.basePrice ?? productWithPrice.price ?? 0];
   const validPrices = prices.length > 0 ? prices : [0];
   const minPrice = Math.min(...validPrices);
   const maxPrice = Math.max(...validPrices);
+  const isPriceRange = minPrice !== maxPrice;
   const priceDisplay =
-    minPrice === maxPrice
-      ? formatPrice(minPrice)
-      : formatPriceRange(minPrice, maxPrice);
+    isPriceRange
+      ? formatPriceRange(minPrice, maxPrice)
+      : formatPrice(minPrice);
 
   // Mock rating data (can be replaced with real data when available)
   // Use deterministic hash for review count to prevent hydration mismatch
@@ -280,15 +284,13 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
               {product.name}
             </h3>
 
-            {/* Description - hidden on mobile */}
-            {product.description && (
-              <p className={cn(
-                "hidden sm:block text-sm line-clamp-2",
-                isLight ? "text-neutral-500" : "text-white/60"
-              )}>
-                {product.description.replace(/<[^>]*>/g, '').slice(0, 80)}...
-              </p>
-            )}
+            {/* Description - hidden on mobile, fixed height for alignment */}
+            <p className={cn(
+              "hidden sm:block text-sm line-clamp-2 min-h-[2.5rem]",
+              isLight ? "text-neutral-500" : "text-white/60"
+            )}>
+              {product.description ? `${product.description.replace(/<[^>]*>/g, '').slice(0, 80)}...` : '\u00A0'}
+            </p>
 
             {/* Rating */}
             <div className="flex items-center gap-1 sm:gap-2">
@@ -315,7 +317,8 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
             <div className="flex items-center justify-between pt-1 sm:pt-2 gap-2">
               <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
                 <span className={cn(
-                  "text-base sm:text-2xl font-bold",
+                  "font-bold whitespace-nowrap",
+                  isPriceRange ? "text-sm sm:text-lg" : "text-base sm:text-2xl",
                   isLight ? "text-neutral-900" : "text-white"
                 )}>{priceDisplay}</span>
                 {productWithPrice.salePrice && productWithPrice.basePrice && productWithPrice.basePrice > productWithPrice.salePrice && (

@@ -4,55 +4,125 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { CheckCircle, Package, ArrowLeft, Loader2 } from 'lucide-react';
-import { omni } from '@/lib/omni-sync';
+import { CheckCircle, Package, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { omni, clearCartId } from '@/lib/omni-sync';
 import { useCartStore } from '@/store/cart-store';
 import { Button } from '@/components/ui/button';
 
+type OrderStatus = 'loading' | 'success' | 'error';
+
 function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
-  const checkoutId = searchParams.get('checkoutId');
+  const checkoutId = searchParams.get('checkoutId') || searchParams.get('checkout_id');
   const orderNumberParam = searchParams.get('orderNumber');
   const isDemo = searchParams.get('demo') === 'true';
   const { clearCart } = useCartStore();
 
+  const [status, setStatus] = useState<OrderStatus>('loading');
   const [orderNumber, setOrderNumber] = useState<string | null>(orderNumberParam);
-  const [isLoading, setIsLoading] = useState(!orderNumberParam);
+  const [orderId, setOrderId] = useState<string | null>(null);
 
   useEffect(() => {
-    async function getOrderInfo() {
-      // Clear the cart
-      clearCart();
+    async function processOrderCompletion() {
+      // If demo mode, just show success
+      if (isDemo) {
+        clearCart();
+        setStatus('success');
+        return;
+      }
 
-      // If we already have order number from URL, don't fetch
-      if (orderNumberParam || isDemo || !checkoutId) {
-        setIsLoading(false);
+      // If no checkoutId, still show success (might be bank transfer)
+      if (!checkoutId) {
+        clearCart();
+        setStatus('success');
         return;
       }
 
       try {
-        // Get payment status to retrieve order info
-        const status = await omni.getPaymentStatus(checkoutId);
-        if (status.orderNumber) {
-          setOrderNumber(status.orderNumber);
+        // Clear local cart and cartId
+        clearCart();
+        clearCartId();
+
+        // If we already have order number, show success
+        if (orderNumberParam) {
+          setOrderNumber(orderNumberParam);
+          setStatus('success');
+          return;
+        }
+
+        // Try to get payment status
+        try {
+          const paymentStatus = await omni.getPaymentStatus(checkoutId);
+
+          if (paymentStatus.orderNumber) {
+            setOrderNumber(paymentStatus.orderNumber);
+          }
+          if (paymentStatus.orderId) {
+            setOrderId(paymentStatus.orderId);
+          }
+
+          // Check if payment failed
+          if (paymentStatus.status === 'failed') {
+            setStatus('error');
+            return;
+          }
+
+          setStatus('success');
+        } catch (statusErr) {
+          console.warn('getPaymentStatus warning:', statusErr);
+          // Network error - still show success since payment likely went through
+          setStatus('success');
         }
       } catch (err) {
-        console.error('Error getting order info:', err);
-        // Order might still be processing, show generic success
-      } finally {
-        setIsLoading(false);
+        console.error('Error processing order completion:', err);
+        // If there's an error but we have a checkoutId, still show success
+        // The order might just be processing
+        setStatus('success');
       }
     }
 
-    getOrderInfo();
+    processOrderCompletion();
   }, [checkoutId, orderNumberParam, isDemo, clearCart]);
 
-  if (isLoading) {
+  if (status === 'loading') {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center pt-24">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center pt-24">
         {/* Dark header background for navbar */}
         <div className="absolute inset-x-0 top-0 h-20 bg-black z-40" />
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
+        <p className="text-muted-foreground">מאשר את ההזמנה...</p>
+      </div>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-4 pt-24 pb-16">
+        {/* Dark header background for navbar */}
+        <div className="absolute inset-x-0 top-0 h-20 bg-black z-40" />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center max-w-md"
+        >
+          <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="h-10 w-10 text-destructive" />
+          </div>
+          <h1 className="text-2xl lg:text-3xl font-bold mb-4">
+            אירעה שגיאה בתשלום
+          </h1>
+          <p className="text-muted-foreground mb-8">
+            התשלום לא הושלם. אנא נסה שנית או צור קשר עם שירות הלקוחות.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button size="lg" asChild>
+              <Link href="/cart">
+                חזרה לעגלה
+                <ArrowLeft className="h-4 w-4 me-2" />
+              </Link>
+            </Button>
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -127,7 +197,7 @@ function CheckoutSuccessContent() {
               href="tel:+972501234567"
               className="text-primary hover:underline"
             >
-              050-123-4567
+              054-345-3739
             </a>
             <span className="text-muted-foreground">|</span>
             <a

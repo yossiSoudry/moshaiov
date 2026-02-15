@@ -33,7 +33,7 @@ const contactInfo = [
   {
     icon: Phone,
     title: 'טלפון',
-    content: '050-123-4567',
+    content: '054-345-3739',
     link: 'tel:+972501234567',
     linkText: null,
   },

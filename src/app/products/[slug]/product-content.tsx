@@ -22,6 +22,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import type { Product, ProductVariant } from 'omni-sync-sdk';
 
+// Metafield type for display
+interface MetafieldDisplay {
+  id?: string;
+  definitionName: string;
+  definitionKey?: string;
+  value: string | number | boolean;
+  type?: string;
+}
+
 interface InitialProductData {
   id: string;
   name: string;
@@ -91,11 +100,37 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
   };
 
   const productWithPrice = product as { basePrice?: number; salePrice?: number | null } | null;
-  const variantWithPrice = selectedVariant as { basePrice?: number; salePrice?: number | null } | null;
-  // If salePrice exists, it's the current price and basePrice is the original
-  const currentPrice = variantWithPrice?.salePrice ?? variantWithPrice?.basePrice ?? productWithPrice?.salePrice ?? productWithPrice?.basePrice ?? 0;
-  const compareAtPrice = (variantWithPrice?.salePrice ?? productWithPrice?.salePrice) ? (variantWithPrice?.basePrice ?? productWithPrice?.basePrice) : undefined;
+  const variantWithPrice = selectedVariant as { basePrice?: number; salePrice?: number | null; price?: number } | null;
+
+  // Get variant price - variants may have salePrice, price, or basePrice
+  const getVariantPriceValue = (): number => {
+    if (!selectedVariant) {
+      return productWithPrice?.salePrice ?? productWithPrice?.basePrice ?? 0;
+    }
+    // Try sale price first, then price, then base price
+    return variantWithPrice?.salePrice ?? variantWithPrice?.price ?? variantWithPrice?.basePrice ?? productWithPrice?.salePrice ?? productWithPrice?.basePrice ?? 0;
+  };
+
+  const currentPrice = getVariantPriceValue();
+
+  // Calculate compare at price for discount display
+  const compareAtPrice = (variantWithPrice?.salePrice ?? productWithPrice?.salePrice)
+    ? (variantWithPrice?.basePrice ?? productWithPrice?.basePrice)
+    : undefined;
   const hasDiscount = compareAtPrice && compareAtPrice > currentPrice;
+
+  // Get display image - use variant image if available
+  const getDisplayImage = (): string => {
+    // Check if variant has an image (might be on extended type)
+    const variantWithImage = selectedVariant as { image?: string | { url: string; thumbnailUrl?: string } } | null;
+    if (variantWithImage?.image) {
+      const img = variantWithImage.image;
+      return typeof img === 'string' ? img : img.url;
+    }
+    return product?.images?.[selectedImage]?.url || '';
+  };
+
+  const displayImage = getDisplayImage();
 
   // Get stock info
   const getStockDisplay = () => {
@@ -187,9 +222,9 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
               className="relative aspect-square bg-muted rounded-xl overflow-hidden"
               layoutId={`product-image-${product.id}`}
             >
-              {product.images?.[selectedImage]?.url ? (
+              {displayImage ? (
                 <Image
-                  src={product.images[selectedImage].url}
+                  src={displayImage}
                   alt={product.name}
                   fill
                   className="object-cover"
@@ -279,7 +314,7 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
               {/* Price */}
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-2xl lg:text-3xl font-bold">
-                  {formatPrice(currentPrice)}
+                  {formatPrice(Number(currentPrice))}
                 </span>
                 {hasDiscount && (
                   <span className="text-lg text-muted-foreground line-through">
@@ -390,6 +425,32 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
                   <p className="text-muted-foreground leading-relaxed">
                     {product.description}
                   </p>
+                </div>
+              )}
+
+              {/* Metafields / Product Details */}
+              {product.metafields && (product.metafields as unknown as MetafieldDisplay[]).length > 0 && (
+                <div className="mb-6">
+                  <h3 className="font-medium mb-3">פרטי המוצר</h3>
+                  <div className="bg-muted rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <tbody>
+                        {(product.metafields as unknown as MetafieldDisplay[]).map((mf, index) => (
+                          <tr
+                            key={mf.id || `metafield-${index}`}
+                            className={index % 2 === 0 ? 'bg-muted' : 'bg-background/50'}
+                          >
+                            <td className="py-2 px-4 font-medium text-muted-foreground">
+                              {mf.definitionName || (mf as unknown as { name?: string }).name || 'פרט'}
+                            </td>
+                            <td className="py-2 px-4 text-foreground">
+                              {String(mf.value)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 

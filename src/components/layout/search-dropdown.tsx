@@ -5,8 +5,26 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatPrice } from '@/lib/utils';
-import { Sparkles, TrendingUp, Clock, ArrowLeft, Search, Diamond } from 'lucide-react';
+import { Sparkles, TrendingUp, Clock, ArrowLeft, Search, Diamond, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { omni } from '@/lib/omni-sync';
+
+// Local suggestion types for state
+interface LocalProductSuggestion {
+  id: string;
+  name: string;
+  slug?: string | null;
+  price?: number;
+  compareAtPrice?: number;
+  image?: string | null;
+}
+
+interface LocalCategorySuggestion {
+  id?: string;
+  name: string;
+  slug?: string | null;
+  productCount?: number;
+}
 
 interface SearchProduct {
   id: string;
@@ -60,7 +78,8 @@ const quickSuggestions = [
 ];
 
 export function SearchDropdown({ query, onClose }: SearchDropdownProps) {
-  const [products, setProducts] = useState<SearchProduct[]>([]);
+  const [products, setProducts] = useState<LocalProductSuggestion[]>([]);
+  const [categories, setCategories] = useState<LocalCategorySuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
@@ -68,6 +87,7 @@ export function SearchDropdown({ query, onClose }: SearchDropdownProps) {
     async function search() {
       if (query.length < 2) {
         setProducts([]);
+        setCategories([]);
         setHasSearched(false);
         return;
       }
@@ -75,14 +95,28 @@ export function SearchDropdown({ query, onClose }: SearchDropdownProps) {
       setIsLoading(true);
       setHasSearched(true);
       try {
-        // Use the API route to avoid CORS issues
-        const response = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=5`);
-        if (!response.ok) throw new Error('Search failed');
-        const data = await response.json();
-        setProducts((data.data || []) as SearchProduct[]);
+        // Use SDK's getSearchSuggestions API
+        const suggestions = await omni.getSearchSuggestions(query, 5);
+        setProducts((suggestions.products || []) as LocalProductSuggestion[]);
+        setCategories((suggestions.categories || []) as LocalCategorySuggestion[]);
       } catch (error) {
         console.error('Search error:', error);
-        setProducts([]);
+        // Fallback to API route
+        try {
+          const response = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=5`);
+          if (response.ok) {
+            const data = await response.json();
+            setProducts((data.data || []).map((p: SearchProduct): LocalProductSuggestion => ({
+              id: p.id,
+              name: p.name,
+              slug: p.slug,
+              price: p.salePrice ?? p.basePrice ?? 0,
+              image: p.images?.[0]?.url,
+            })));
+          }
+        } catch {
+          setProducts([]);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -143,7 +177,7 @@ export function SearchDropdown({ query, onClose }: SearchDropdownProps) {
     );
   }
 
-  if (products.length === 0 && hasSearched) {
+  if (products.length === 0 && categories.length === 0 && hasSearched) {
     return (
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -166,23 +200,58 @@ export function SearchDropdown({ query, onClose }: SearchDropdownProps) {
       animate={{ opacity: 1 }}
       className="border-t border-white/10"
     >
+      {/* Category suggestions */}
+      {categories.length > 0 && (
+        <div className="px-4 py-3 border-b border-white/5">
+          <span className="text-xs text-white/40 font-medium tracking-wider uppercase flex items-center gap-2 mb-2">
+            <Tag className="w-3 h-3" />
+            קטגוריות
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {categories.map((category, i) => (
+              <motion.button
+                key={category.id || i}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.05 }}
+                onClick={() => {
+                  window.location.href = `/products?category=${encodeURIComponent(category.slug || category.name)}`;
+                  onClose();
+                }}
+                className="group flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-gold-500/20 border border-white/10 hover:border-gold-500/40 rounded-full transition-all duration-300"
+              >
+                <Diamond className="w-3 h-3 text-gold-500/70 group-hover:text-gold-400" />
+                <span className="text-sm text-white/70 group-hover:text-white">{category.name}</span>
+                {category.productCount !== undefined && (
+                  <span className="text-xs text-white/40">({category.productCount})</span>
+                )}
+              </motion.button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Results header */}
-      <div className="px-4 py-3 flex items-center justify-between border-b border-white/5">
-        <span className="text-xs text-white/40 font-medium tracking-wider uppercase">
-          תוצאות חיפוש
-        </span>
-        <span className="text-xs text-gold-500/70">
-          {products.length} מוצרים
-        </span>
-      </div>
+      {products.length > 0 && (
+        <div className="px-4 py-3 flex items-center justify-between border-b border-white/5">
+          <span className="text-xs text-white/40 font-medium tracking-wider uppercase">
+            מוצרים
+          </span>
+          <span className="text-xs text-gold-500/70">
+            {products.length} תוצאות
+          </span>
+        </div>
+      )}
 
       {/* Results list */}
       <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-gold-500/20 scrollbar-track-transparent">
         <AnimatePresence mode="popLayout">
           {products.map((product, index) => {
-            const price = product.salePrice ?? product.basePrice ?? 0;
-            const hasDiscount = product.salePrice && product.basePrice && product.basePrice > product.salePrice;
-            const isFeatured = product.tags?.includes('featured') || product.tags?.includes('new');
+            // Handle product suggestion
+            const suggestion = product;
+            const price = suggestion.price || 0;
+            const hasDiscount = suggestion.compareAtPrice && suggestion.compareAtPrice > price;
+            const imageUrl = suggestion.image;
 
             return (
               <motion.div
@@ -203,9 +272,9 @@ export function SearchDropdown({ query, onClose }: SearchDropdownProps) {
 
                   {/* Product image */}
                   <div className="relative h-16 w-16 bg-white/5 rounded-xl overflow-hidden flex-shrink-0 ring-1 ring-white/10 group-hover:ring-gold-500/30 transition-all duration-300">
-                    {product.images?.[0]?.url ? (
+                    {imageUrl ? (
                       <Image
-                        src={product.images[0].url}
+                        src={imageUrl}
                         alt={product.name}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -217,8 +286,8 @@ export function SearchDropdown({ query, onClose }: SearchDropdownProps) {
                       </div>
                     )}
 
-                    {/* Featured badge */}
-                    {isFeatured && (
+                    {/* Discount badge */}
+                    {hasDiscount && (
                       <div className="absolute top-1 right-1">
                         <Sparkles className="w-3 h-3 text-gold-400" />
                       </div>
@@ -237,9 +306,9 @@ export function SearchDropdown({ query, onClose }: SearchDropdownProps) {
                       )}>
                         {formatPrice(price)}
                       </span>
-                      {hasDiscount && (
+                      {hasDiscount && suggestion.compareAtPrice && (
                         <span className="text-xs text-white/40 line-through">
-                          {formatPrice(product.basePrice!)}
+                          {formatPrice(suggestion.compareAtPrice)}
                         </span>
                       )}
                     </div>

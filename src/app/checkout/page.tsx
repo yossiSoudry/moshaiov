@@ -11,11 +11,12 @@ import {
   CreditCard,
   Loader2,
   Banknote,
+  Clock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-import { omni, getCartId } from '@/lib/omni-sync';
+import { omni, getCartId, setCartId, isLoggedIn } from '@/lib/omni-sync';
 import { useCartStore } from '@/store/cart-store';
 import { useAuthStore } from '@/store/auth-store';
 import { formatPrice, cn } from '@/lib/utils';
@@ -76,6 +77,13 @@ export default function CheckoutPage() {
   // Demo mode flag (when API is unavailable)
   const [isDemoMode, setIsDemoMode] = useState(false);
 
+  // Get selected indices from cart page
+  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
+
+  // Reservation state
+  const [reservationRemaining, setReservationRemaining] = useState<number>(0);
+  const [reservationMessage, setReservationMessage] = useState<string>('');
+
   // Check if cart exists
   useEffect(() => {
     if (!cart || cart.items.length === 0) {
@@ -83,7 +91,31 @@ export default function CheckoutPage() {
     }
   }, [cart, router]);
 
-  // Initialize checkout - create API cart from local cart items
+  // Load selected indices from session storage
+  useEffect(() => {
+    const stored = sessionStorage.getItem('checkoutSelectedIndices');
+    if (stored) {
+      try {
+        setSelectedIndices(JSON.parse(stored));
+      } catch {
+        // Default to all items
+        setSelectedIndices(cart?.items.map((_, i) => i) || []);
+      }
+    } else {
+      setSelectedIndices(cart?.items.map((_, i) => i) || []);
+    }
+  }, [cart?.items]);
+
+  // Handle reservation countdown
+  useEffect(() => {
+    if (reservationRemaining <= 0) return;
+    const timer = setInterval(() => {
+      setReservationRemaining((r) => Math.max(0, r - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [reservationRemaining]);
+
+  // Initialize checkout - handle guest vs logged-in users
   useEffect(() => {
     async function initCheckout() {
       if (!cart || cart.items.length === 0) return;
@@ -91,19 +123,22 @@ export default function CheckoutPage() {
       try {
         setIsLoading(true);
 
-        // Check if we already have a cartId
+        // Determine which items to checkout
+        const itemsToCheckout = selectedIndices.length > 0
+          ? selectedIndices.map(i => cart.items[i]).filter(Boolean)
+          : cart.items;
+
+        // Check for existing cart (may have coupon applied)
         let cartId = getCartId();
 
         if (!cartId) {
-          // Create a new API cart
+          // No existing cart - create a new one
           const apiCart = await omni.createCart();
           cartId = apiCart.id;
+          setCartId(cartId);
 
-          // Save cartId to localStorage
-          localStorage.setItem('cartId', cartId);
-
-          // Add all local cart items to the API cart
-          for (const item of cart.items) {
+          // Add selected items to server cart
+          for (const item of itemsToCheckout) {
             await omni.addToCart(cartId, {
               productId: item.productId,
               variantId: item.variantId,
@@ -112,13 +147,19 @@ export default function CheckoutPage() {
           }
         }
 
-        // Create checkout from cart
+        // Create checkout from cart (preserves coupon if applied)
         const checkoutData = await omni.createCheckout({ cartId });
         setCheckout(checkoutData);
+
+        // Handle reservation info if present
+        const reservation = (checkoutData as unknown as { reservation?: { hasReservation?: boolean; remainingSeconds?: number; countdownMessage?: string } }).reservation;
+        if (reservation?.hasReservation && reservation.remainingSeconds) {
+          setReservationRemaining(reservation.remainingSeconds);
+          setReservationMessage(reservation.countdownMessage || '');
+        }
       } catch (err) {
         console.error('Checkout init error:', err);
         // Allow demo mode - continue without API checkout
-        // The user can still fill in address and proceed with demo/bank transfer
         setIsDemoMode(true);
       } finally {
         setIsLoading(false);
@@ -126,7 +167,7 @@ export default function CheckoutPage() {
     }
 
     initCheckout();
-  }, [cart]);
+  }, [cart, selectedIndices]);
 
   // Load saved customer addresses
   useEffect(() => {
@@ -663,62 +704,108 @@ export default function CheckoutPage() {
           <div className="lg:col-span-1">
             <div className="sticky top-24 bg-background rounded-xl p-6">
               <h3 className="font-semibold mb-4">סיכום הזמנה</h3>
+
+              {/* Reservation countdown */}
+              {reservationRemaining > 0 && (
+                <div className="mb-4 flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-800 dark:text-amber-200">
+                  <Clock className="h-4 w-4" />
+                  <span className="text-sm">
+                    {reservationMessage || `הפריטים שמורים עוד ${Math.floor(reservationRemaining / 60)}:${(reservationRemaining % 60).toString().padStart(2, '0')}`}
+                  </span>
+                </div>
+              )}
+
               <div className="space-y-3 max-h-64 overflow-y-auto">
-                {cart.items.map((item) => {
+                {/* Show selected cart items */}
+                {cart.items.filter((_, index) => selectedIndices.length === 0 || selectedIndices.includes(index)).map((item, index) => {
+                  const productName = item.product?.name || 'מוצר';
+                  const variantName = item.variant?.name;
+                  const unitPrice = item.unitPrice || '0';
+                  const quantity = item.quantity || 1;
                   const images = (item.product as { images?: { url: string }[] } | undefined)?.images;
+
                   return (
-                  <div key={item.id} className="flex gap-3 items-center">
-                    <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden flex-shrink-0">
-                      {images?.[0]?.url && (
-                        <img
-                          src={images[0].url}
-                          alt={item.product?.name || ''}
-                          className="w-full h-full object-cover"
-                        />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {item.product?.name}
-                      </p>
-                      {item.variant && (
-                        <p className="text-xs text-muted-foreground">
-                          {item.variant.name}
+                    <div key={index} className="flex gap-3 items-center">
+                      <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+                        {images?.[0]?.url && (
+                          <img
+                            src={images[0].url}
+                            alt={productName}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {productName}
                         </p>
-                      )}
+                        {variantName && (
+                          <p className="text-xs text-muted-foreground">
+                            {variantName}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        x{quantity}
+                      </span>
+                      <p className="text-sm font-medium">
+                        {formatPrice(parseFloat(unitPrice) * quantity)}
+                      </p>
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      x{item.quantity}
-                    </span>
-                    <p className="text-sm font-medium">
-                      {formatPrice(parseFloat(item.unitPrice || '0') * item.quantity)}
-                    </p>
-                  </div>
-                )})}
+                  );
+                })}
               </div>
               <Separator className="my-4" />
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">סה״כ מוצרים</span>
-                  <span>{formatPrice(parseFloat(cart.subtotal || '0'))}</span>
+                  <span>{formatPrice(parseFloat(checkout?.subtotal || cart.subtotal || '0'))}</span>
                 </div>
-                {(() => {
-                  const shippingCost = (checkout as unknown as { shipping?: { cost?: number } })?.shipping?.cost;
-                  return shippingCost !== undefined && (
+
+                {/* Discount */}
+                {checkout && parseFloat(checkout.discountAmount || '0') > 0 && (
+                  <div className="flex justify-between text-green-600 dark:text-green-400">
+                    <span>
+                      הנחה {checkout.couponCode && `(${checkout.couponCode})`}
+                    </span>
+                    <span>-{formatPrice(parseFloat(checkout.discountAmount))}</span>
+                  </div>
+                )}
+
+                {/* Shipping */}
+                {checkout?.shippingAmount !== undefined ? (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">משלוח</span>
                     <span>
-                      {shippingCost === 0
+                      {parseFloat(checkout.shippingAmount || '0') === 0
                         ? 'חינם'
-                        : formatPrice(shippingCost)}
+                        : formatPrice(parseFloat(checkout.shippingAmount))}
                     </span>
                   </div>
-                )})()}
+                ) : (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">משלוח</span>
+                    <span className="text-muted-foreground">יחושב בהמשך</span>
+                  </div>
+                )}
+
+                {/* Tax - show after shipping address is set */}
+                {checkout?.shippingAddress ? (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">מע״מ</span>
+                    <span>{formatPrice(parseFloat(checkout.taxAmount || '0'))}</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">מע״מ</span>
+                    <span className="text-muted-foreground">יחושב לאחר כתובת</span>
+                  </div>
+                )}
               </div>
               <Separator className="my-4" />
               <div className="flex justify-between text-lg font-semibold">
                 <span>סה״כ</span>
-                <span>{formatPrice((checkout as unknown as { totals?: { total?: number } })?.totals?.total || parseFloat(cart.subtotal || '0'))}</span>
+                <span>{formatPrice(parseFloat(checkout?.total || checkout?.subtotal || cart.subtotal || '0'))}</span>
               </div>
             </div>
           </div>

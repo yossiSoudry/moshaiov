@@ -48,7 +48,7 @@ const contactInfo = [
   },
   {
     icon: Phone,
-    content: '050-123-4567',
+    content: '054-345-3739',
     href: 'tel:+972501234567',
   },
   {

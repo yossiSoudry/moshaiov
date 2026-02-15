@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingBag,
@@ -12,33 +13,163 @@ import {
   ChevronRight,
   Tag,
   ArrowLeft,
+  Check,
 } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { omni, isLoggedIn, getCartId, setCartId } from '@/lib/omni-sync';
+import type { Cart } from 'omni-sync-sdk';
 
 export default function CartPage() {
-  const { cart, isLoading, updateQuantity, removeItem, applyCoupon, error } = useCartStore();
+  const router = useRouter();
+  const { cart, isLoading, updateQuantity, removeItem, error } = useCartStore();
   const [couponCode, setCouponCode] = useState('');
   const [couponError, setCouponError] = useState('');
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
+  const [serverCart, setServerCart] = useState<Cart | null>(null);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const items = cart?.items || [];
   const subtotal = cart?.subtotal ? parseFloat(cart.subtotal) : 0;
-  const discount = 0; // Local cart doesn't support discounts yet
-  const total = subtotal;
+  const total = subtotal - discountAmount;
 
+  // Initialize selected indices when items change
+  useEffect(() => {
+    if (items.length > 0 && selectedIndices.length === 0) {
+      setSelectedIndices(items.map((_, i) => i));
+    }
+  }, [items, selectedIndices.length]);
+
+  // Toggle item selection
+  const toggleItem = (index: number) => {
+    setSelectedIndices((prev) =>
+      prev.includes(index)
+        ? prev.filter((i) => i !== index)
+        : [...prev, index]
+    );
+  };
+
+  // Toggle all items
+  const toggleAll = () => {
+    if (selectedIndices.length === items.length) {
+      setSelectedIndices([]);
+    } else {
+      setSelectedIndices(items.map((_, i) => i));
+    }
+  };
+
+  // Calculate selected subtotal
+  const selectedSubtotal = items.reduce((sum, item, index) => {
+    if (selectedIndices.includes(index)) {
+      return sum + parseFloat(item.unitPrice) * item.quantity;
+    }
+    return sum;
+  }, 0);
+
+  // Apply coupon - requires server cart
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponCode.trim()) return;
 
+    setIsApplyingCoupon(true);
+    setCouponError('');
+
     try {
-      setCouponError('');
-      await applyCoupon(couponCode);
+      // First, ensure we have a server cart
+      let cartId = getCartId();
+
+      if (!cartId) {
+        // Create server cart and add local items
+        const apiCart = await omni.createCart();
+        cartId = apiCart.id;
+        setCartId(cartId);
+
+        // Add local items to server cart
+        for (const item of items) {
+          await omni.addToCart(cartId, {
+            productId: item.productId,
+            variantId: item.variantId,
+            quantity: item.quantity,
+          });
+        }
+      }
+
+      // Apply coupon to server cart
+      const updatedCart = await omni.applyCoupon(cartId, couponCode.trim());
+      setServerCart(updatedCart);
+      setAppliedCoupon(updatedCart.couponCode || couponCode.trim());
+      setDiscountAmount(parseFloat(updatedCart.discountAmount || '0'));
       setCouponCode('');
     } catch (err) {
-      setCouponError('קוד קופון לא תקין');
+      setCouponError(err instanceof Error ? err.message : 'קוד קופון לא תקין');
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  // Remove coupon
+  const handleRemoveCoupon = async () => {
+    const cartId = getCartId();
+    if (!cartId) return;
+
+    try {
+      const updatedCart = await omni.removeCoupon(cartId);
+      setServerCart(updatedCart);
+      setAppliedCoupon(null);
+      setDiscountAmount(0);
+    } catch (err) {
+      console.error('Failed to remove coupon:', err);
+    }
+  };
+
+  // Handle checkout - create checkout with selected items only
+  const handleCheckout = async () => {
+    if (selectedIndices.length === 0) return;
+
+    setIsCheckingOut(true);
+
+    try {
+      if (isLoggedIn()) {
+        // Logged-in user: create server cart first if needed
+        let cartId = getCartId();
+
+        if (!cartId) {
+          const apiCart = await omni.createCart();
+          cartId = apiCart.id;
+          setCartId(cartId);
+
+          // Add only selected items
+          for (const index of selectedIndices) {
+            const item = items[index];
+            await omni.addToCart(cartId, {
+              productId: item.productId,
+              variantId: item.variantId,
+              quantity: item.quantity,
+            });
+          }
+        }
+
+        // Store selected indices for checkout page
+        sessionStorage.setItem('checkoutSelectedIndices', JSON.stringify(selectedIndices));
+        router.push('/checkout');
+      } else {
+        // Guest user: use startGuestCheckout with selectedIndices
+        sessionStorage.setItem('checkoutSelectedIndices', JSON.stringify(selectedIndices));
+        router.push('/checkout');
+      }
+    } catch (err) {
+      console.error('Checkout error:', err);
+      // Fallback: just navigate to checkout
+      sessionStorage.setItem('checkoutSelectedIndices', JSON.stringify(selectedIndices));
+      router.push('/checkout');
+    } finally {
+      setIsCheckingOut(false);
     }
   };
 
@@ -96,16 +227,46 @@ export default function CartPage() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
+            {/* Select All */}
+            <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+              <button
+                onClick={toggleAll}
+                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                  selectedIndices.length === items.length
+                    ? 'bg-primary border-primary text-primary-foreground'
+                    : 'border-muted-foreground hover:border-primary'
+                }`}
+              >
+                {selectedIndices.length === items.length && <Check className="h-3 w-3" />}
+              </button>
+              <span className="text-sm font-medium">
+                בחר הכל ({selectedIndices.length}/{items.length})
+              </span>
+            </div>
+
             <AnimatePresence>
-              {items.map((item) => (
+              {items.map((item, index) => (
                 <motion.div
                   key={item.id}
                   layout
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -100 }}
-                  className="flex gap-4 p-4 bg-background border border-border rounded-xl"
+                  className={`flex gap-4 p-4 bg-background border rounded-xl transition-colors ${
+                    selectedIndices.includes(index) ? 'border-primary/50' : 'border-border'
+                  }`}
                 >
+                  {/* Checkbox */}
+                  <button
+                    onClick={() => toggleItem(index)}
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1 transition-colors ${
+                      selectedIndices.includes(index)
+                        ? 'bg-primary border-primary text-primary-foreground'
+                        : 'border-muted-foreground hover:border-primary'
+                    }`}
+                  >
+                    {selectedIndices.includes(index) && <Check className="h-3 w-3" />}
+                  </button>
                   {/* Image */}
                   <Link
                     href={`/products/${(item.product as { slug?: string } | undefined)?.slug || item.productId}`}
@@ -192,21 +353,36 @@ export default function CartPage() {
               <h2 className="text-lg font-semibold">סיכום הזמנה</h2>
 
               {/* Coupon */}
-              <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                <div className="relative flex-1">
-                  <Tag className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="קוד קופון"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    className="ps-10"
-                  />
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between bg-green-50 dark:bg-green-950/30 p-3 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm">
+                    <Tag className="h-4 w-4" />
+                    <span className="font-medium">{appliedCoupon}</span>
+                  </div>
+                  <button
+                    onClick={handleRemoveCoupon}
+                    className="text-red-500 hover:text-red-600 text-sm font-medium"
+                  >
+                    הסר
+                  </button>
                 </div>
-                <Button type="submit" variant="outline" disabled={isLoading}>
-                  החל
-                </Button>
-              </form>
+              ) : (
+                <form onSubmit={handleApplyCoupon} className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Tag className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder="קוד קופון"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value)}
+                      className="ps-10"
+                    />
+                  </div>
+                  <Button type="submit" variant="outline" disabled={isApplyingCoupon}>
+                    {isApplyingCoupon ? '...' : 'החל'}
+                  </Button>
+                </form>
+              )}
               {couponError && (
                 <p className="text-sm text-destructive">{couponError}</p>
               )}
@@ -219,17 +395,23 @@ export default function CartPage() {
               {/* Totals */}
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">סה״כ מוצרים</span>
-                  <span>{formatPrice(subtotal)}</span>
+                  <span className="text-muted-foreground">
+                    פריטים נבחרים ({selectedIndices.length})
+                  </span>
+                  <span>{formatPrice(selectedSubtotal)}</span>
                 </div>
-                {discount > 0 && (
-                  <div className="flex justify-between text-success">
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-green-600 dark:text-green-400">
                     <span>הנחה</span>
-                    <span>-{formatPrice(discount)}</span>
+                    <span>-{formatPrice(discountAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">משלוח</span>
+                  <span className="text-muted-foreground">יחושב בהמשך</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">מע״מ</span>
                   <span className="text-muted-foreground">יחושב בהמשך</span>
                 </div>
               </div>
@@ -238,14 +420,23 @@ export default function CartPage() {
 
               <div className="flex justify-between text-lg font-semibold">
                 <span>סה״כ לתשלום</span>
-                <span>{formatPrice(total)}</span>
+                <span>{formatPrice(selectedSubtotal - discountAmount)}</span>
               </div>
 
-              <Button size="lg" className="w-full" asChild>
-                <Link href="/checkout">
-                  לתשלום
-                  <ArrowLeft className="h-4 w-4 me-2" />
-                </Link>
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={handleCheckout}
+                disabled={selectedIndices.length === 0 || isCheckingOut}
+              >
+                {isCheckingOut ? (
+                  'מעבד...'
+                ) : (
+                  <>
+                    לתשלום ({selectedIndices.length} פריטים)
+                    <ArrowLeft className="h-4 w-4 me-2" />
+                  </>
+                )}
               </Button>
 
               <Button variant="outline" className="w-full" asChild>
