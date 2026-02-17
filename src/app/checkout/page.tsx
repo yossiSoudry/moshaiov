@@ -14,6 +14,7 @@ import {
   Clock,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { omni, getCartId, setCartId, isLoggedIn } from '@/lib/omni-sync';
@@ -345,6 +346,53 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
+      {/* Checkout Header with Logo */}
+      <div className="bg-black py-4">
+        <div className="container mx-auto px-4">
+          <Link href="/" className="flex items-center justify-center gap-2 group">
+            <svg
+              viewBox="0 0 40 40"
+              className="h-8 w-8"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <defs>
+                <linearGradient id="checkoutDiamondGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#b8942e" />
+                  <stop offset="50%" stopColor="#e8d9a8" />
+                  <stop offset="100%" stopColor="#b8942e" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M20 4L8 16L20 36L32 16L20 4Z"
+                stroke="url(#checkoutDiamondGradient)"
+                strokeWidth="2"
+                fill="none"
+              />
+              <path
+                d="M8 16H32"
+                stroke="url(#checkoutDiamondGradient)"
+                strokeWidth="2"
+              />
+              <path
+                d="M20 4L14 16L20 36L26 16L20 4Z"
+                stroke="rgba(212,175,55,0.3)"
+                strokeWidth="1"
+                fill="none"
+              />
+            </svg>
+            <Image
+              src="/moshayov-text-logo.png"
+              alt="MOSHAYOV"
+              width={120}
+              height={24}
+              className="h-6 w-auto object-contain"
+              priority
+            />
+          </Link>
+        </div>
+      </div>
+
       {/* Breadcrumb */}
       <div className="bg-background border-b border-border py-4">
         <div className="container mx-auto px-4">

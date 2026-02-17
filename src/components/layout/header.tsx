@@ -48,6 +48,11 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
 
+  // Don't render header on checkout pages (they have their own minimal header)
+  if (pathname?.startsWith('/checkout')) {
+    return null;
+  }
+
   const isActive = (link: string) => {
     if (!isMounted) return false; // Prevent hydration mismatch
     if (link === '/') {
