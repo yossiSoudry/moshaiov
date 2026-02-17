@@ -52,14 +52,25 @@ interface MobileNavMenuProps {
 
 export const Navbar = ({ children, className, alwaysVisible = false }: NavbarProps) => {
   const ref = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
   const { scrollY } = useScroll({
     target: ref,
     offset: ["start start", "end start"],
   });
-  const [visible, setVisible] = useState<boolean>(alwaysVisible);
+
+  // Pages with light backgrounds need the navbar to always be visible
+  const lightBackgroundPages = ['/checkout', '/cart', '/account', '/login', '/register', '/forgot-password'];
+  const isLightBackgroundPage = lightBackgroundPages.some(page => pathname?.startsWith(page));
+  const shouldAlwaysBeVisible = alwaysVisible || isLightBackgroundPage;
+
+  const [visible, setVisible] = useState<boolean>(shouldAlwaysBeVisible);
+
+  useEffect(() => {
+    setVisible(shouldAlwaysBeVisible);
+  }, [shouldAlwaysBeVisible]);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
-    if (alwaysVisible) {
+    if (shouldAlwaysBeVisible) {
       setVisible(true);
     } else if (latest > 100) {
       setVisible(true);
