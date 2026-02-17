@@ -34,7 +34,7 @@ const contactInfo = [
     icon: Phone,
     title: 'טלפון',
     content: '054-345-3739',
-    link: 'tel:+972501234567',
+    link: 'tel:+972543453739',
     linkText: null,
   },
   {
@@ -162,7 +162,7 @@ export function ContactContent() {
 
               {/* WhatsApp CTA */}
               <motion.a
-                href="https://wa.me/972501234567"
+                href="https://wa.me/972543453739"
                 target="_blank"
                 rel="noopener noreferrer"
                 initial={{ opacity: 0, y: 20 }}

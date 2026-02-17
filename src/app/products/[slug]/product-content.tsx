@@ -422,9 +422,10 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
               {product.description && (
                 <div className="mb-6">
                   <h3 className="font-medium mb-3">תיאור המוצר</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {product.description}
-                  </p>
+                  <div
+                    className="text-muted-foreground leading-relaxed prose prose-sm prose-neutral dark:prose-invert max-w-none [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-2 [&>h2]:mt-4 [&>h2]:text-foreground [&>h3]:text-lg [&>h3]:font-bold [&>h3]:mb-2 [&>h3]:text-foreground [&>p]:mb-3 [&>ul]:list-disc [&>ul]:pr-6 [&>ul]:mb-3 [&>li]:mb-1 [&_strong]:font-bold [&_strong]:text-foreground"
+                    dangerouslySetInnerHTML={{ __html: product.description }}
+                  />
                 </div>
               )}
 

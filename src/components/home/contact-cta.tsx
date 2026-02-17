@@ -17,7 +17,7 @@ const contactInfo = [
     icon: Phone,
     title: 'טלפון',
     value: '054-345-3739',
-    href: 'tel:+972501234567',
+    href: 'tel:+972543453739',
   },
   {
     icon: Clock,
@@ -269,7 +269,7 @@ export function ContactCTA() {
             <HoverBorderGradient
               containerClassName="rounded-full"
               as="a"
-              href="https://wa.me/972501234567"
+              href="https://wa.me/972543453739"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 bg-gradient-to-br from-black via-neutral-900 to-black px-6 py-2 text-base font-medium"
