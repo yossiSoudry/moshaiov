@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import type { Product, ProductVariant } from 'omni-sync-sdk';
+import type { Product, ProductVariant } from 'brainerce';
 
 // Metafield type for display
 interface MetafieldDisplay {

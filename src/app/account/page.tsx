@@ -19,7 +19,7 @@ import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import type { Order } from 'omni-sync-sdk';
+import type { Order } from 'brainerce';
 
 export default function AccountPage() {
   const router = useRouter();

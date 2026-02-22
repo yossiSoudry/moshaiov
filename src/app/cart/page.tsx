@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { omni, isLoggedIn, getCartId, setCartId } from '@/lib/omni-sync';
-import type { Cart } from 'omni-sync-sdk';
+import type { Cart } from 'brainerce';
 
 export default function CartPage() {
   const router = useRouter();

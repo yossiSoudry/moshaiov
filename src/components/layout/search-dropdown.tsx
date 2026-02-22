@@ -14,8 +14,8 @@ interface LocalProductSuggestion {
   id: string;
   name: string;
   slug?: string | null;
-  price?: number;
-  compareAtPrice?: number;
+  price?: string;
+  compareAtPrice?: string;
   image?: string | null;
 }
 
@@ -110,7 +110,7 @@ export function SearchDropdown({ query, onClose }: SearchDropdownProps) {
               id: p.id,
               name: p.name,
               slug: p.slug,
-              price: p.salePrice ?? p.basePrice ?? 0,
+              price: String(p.salePrice ?? p.basePrice ?? 0),
               image: p.images?.[0]?.url,
             })));
           }

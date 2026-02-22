@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { omni } from '@/lib/omni-sync';
-import type { Product } from 'omni-sync-sdk';
+import type { Product } from 'brainerce';
 
 // Local cart item structure
 interface LocalCartItem {
@@ -86,7 +86,7 @@ export const useCartStore = create<CartState>()(
 
           // Get price
           const productWithPrice = product as Product & { basePrice?: number; salePrice?: number | null };
-          let price = productWithPrice.salePrice ?? productWithPrice.basePrice ?? 0;
+          let price = String(productWithPrice.salePrice ?? productWithPrice.basePrice ?? 0);
 
           // Get variant info and price
           let variantInfo: { id: string; name: string } | undefined;
@@ -94,7 +94,7 @@ export const useCartStore = create<CartState>()(
             const variant = product.variants.find(v => v.id === variantId);
             if (variant) {
               const variantWithPrice = variant as { salePrice?: number | null; price?: number | null; name?: string };
-              price = variantWithPrice.salePrice ?? variantWithPrice.price ?? price;
+              price = String(variantWithPrice.salePrice ?? variantWithPrice.price ?? price);
               variantInfo = {
                 id: variant.id,
                 name: variantWithPrice.name || '',

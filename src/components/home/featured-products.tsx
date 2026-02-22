@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Sparkles, RefreshCw } from 'lucide-react';
 import { ProductCard } from '@/components/products/product-card';
 import { Button } from '@/components/ui/button';
-import type { Product } from 'omni-sync-sdk';
+import type { Product } from 'brainerce';
 
 // Luxury skeleton loader
 function ProductSkeleton({ index }: { index: number }) {

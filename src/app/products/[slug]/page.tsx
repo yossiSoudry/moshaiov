@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://moshayov.co.il';
 const BRAINERCE_API = 'https://api.brainerce.com';
-const CONNECTION_ID = 'vc_tYZpo6sTEQL6y8aWRltQj';
+const CONNECTION_ID = 'vc_Qyklbs620yrtzhmgqoYUK';
 
 interface ProductData {
   id: string;

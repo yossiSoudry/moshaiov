@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
-import type { Product } from 'omni-sync-sdk';
+import type { Product } from 'brainerce';
 
 interface StockBadgeProps {
   product: Product;

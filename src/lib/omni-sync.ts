@@ -1,8 +1,7 @@
-import { OmniSyncClient } from 'omni-sync-sdk';
+import { BrainerceClient } from 'brainerce';
 
-export const omni = new OmniSyncClient({
-  connectionId: 'vc_tYZpo6sTEQL6y8aWRltQj',
-  baseUrl: 'https://api.brainerce.com',
+export const omni = new BrainerceClient({
+  connectionId: 'vc_Qyklbs620yrtzhmgqoYUK',
 });
 
 // Cart helpers - save cart ID to localStorage

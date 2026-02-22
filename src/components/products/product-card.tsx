@@ -12,7 +12,7 @@ import { useFlyToCart } from '@/components/ui/fly-to-cart';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import type { Product } from 'omni-sync-sdk';
+import type { Product } from 'brainerce';
 
 // Generate deterministic "random" number from string (for review count)
 function hashString(str: string): number {

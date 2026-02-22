@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import type { Order } from 'omni-sync-sdk';
+import type { Order } from 'brainerce';
 
 export default function OrdersPage() {
   const router = useRouter();

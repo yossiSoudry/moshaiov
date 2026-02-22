@@ -17,7 +17,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-import { omni, getCartId, setCartId, isLoggedIn } from '@/lib/omni-sync';
+import { omni, getCartId, setCartId, clearCartId, isLoggedIn } from '@/lib/omni-sync';
 import { useCartStore } from '@/store/cart-store';
 import { useAuthStore } from '@/store/auth-store';
 import { formatPrice, cn } from '@/lib/utils';
@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { CheckoutPaymentForm } from '@/components/checkout/payment-form';
-import type { Checkout, ShippingRate } from 'omni-sync-sdk';
+import type { Checkout, ShippingRate } from 'brainerce';
 
 type CheckoutStep = 'info' | 'shipping' | 'payment';
 
@@ -39,6 +39,7 @@ interface ShippingAddress {
   city: string;
   postalCode: string;
   country: string;
+  state?: string; // For shipping zone
 }
 
 export default function CheckoutPage() {
@@ -64,6 +65,10 @@ export default function CheckoutPage() {
     country: 'IL',
   });
 
+  // Shipping zones/regions
+  const [shippingZones, setShippingZones] = useState<{ id: string; name: string }[]>([]);
+  const [selectedZone, setSelectedZone] = useState<string>('');
+
   // Shipping rates
   const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
   const [selectedRate, setSelectedRate] = useState<string | null>(null);
@@ -84,6 +89,16 @@ export default function CheckoutPage() {
   // Reservation state
   const [reservationRemaining, setReservationRemaining] = useState<number>(0);
   const [reservationMessage, setReservationMessage] = useState<string>('');
+
+  // Load shipping zones - static config matching server zones
+  useEffect(() => {
+    // These zones must match the zones configured in Brainerce admin panel
+    const zones = [
+      { id: 'center-tlv', name: 'אזור המרכז ותל אביב' },
+      { id: 'other-regions', name: 'חיפה, הצפון, הדרום וירושלים' }
+    ];
+    setShippingZones(zones);
+  }, []);
 
   // Check if cart exists
   useEffect(() => {
@@ -131,9 +146,32 @@ export default function CheckoutPage() {
 
         // Check for existing cart (may have coupon applied)
         let cartId = getCartId();
+        let needToCreateCart = !cartId;
 
-        if (!cartId) {
-          // No existing cart - create a new one
+        // If cartId exists, verify it's still valid by trying to create checkout
+        if (cartId && !needToCreateCart) {
+          try {
+            const checkoutData = await omni.createCheckout({ cartId });
+            setCheckout(checkoutData);
+
+            // Handle reservation info if present
+            const reservation = (checkoutData as unknown as { reservation?: { hasReservation?: boolean; remainingSeconds?: number; countdownMessage?: string } }).reservation;
+            if (reservation?.hasReservation && reservation.remainingSeconds) {
+              setReservationRemaining(reservation.remainingSeconds);
+              setReservationMessage(reservation.countdownMessage || '');
+            }
+
+            setIsLoading(false);
+            return; // Success - exit early
+          } catch (err) {
+            console.warn('Existing cart not found, creating new cart:', err);
+            clearCartId();
+            needToCreateCart = true;
+          }
+        }
+
+        // Create new cart if needed
+        if (needToCreateCart) {
           const apiCart = await omni.createCart();
           cartId = apiCart.id;
           setCartId(cartId);
@@ -146,17 +184,17 @@ export default function CheckoutPage() {
               quantity: item.quantity,
             });
           }
-        }
 
-        // Create checkout from cart (preserves coupon if applied)
-        const checkoutData = await omni.createCheckout({ cartId });
-        setCheckout(checkoutData);
+          // Create checkout from new cart
+          const checkoutData = await omni.createCheckout({ cartId });
+          setCheckout(checkoutData);
 
-        // Handle reservation info if present
-        const reservation = (checkoutData as unknown as { reservation?: { hasReservation?: boolean; remainingSeconds?: number; countdownMessage?: string } }).reservation;
-        if (reservation?.hasReservation && reservation.remainingSeconds) {
-          setReservationRemaining(reservation.remainingSeconds);
-          setReservationMessage(reservation.countdownMessage || '');
+          // Handle reservation info if present
+          const reservation = (checkoutData as unknown as { reservation?: { hasReservation?: boolean; remainingSeconds?: number; countdownMessage?: string } }).reservation;
+          if (reservation?.hasReservation && reservation.remainingSeconds) {
+            setReservationRemaining(reservation.remainingSeconds);
+            setReservationMessage(reservation.countdownMessage || '');
+          }
         }
       } catch (err) {
         console.error('Checkout init error:', err);
@@ -219,13 +257,24 @@ export default function CheckoutPage() {
 
     try {
       if (checkout) {
-        const result = await omni.setShippingAddress(checkout.id, address);
+        // Include selected zone in address
+        const addressWithZone = {
+          ...address,
+          state: selectedZone, // Send zone as state field
+        };
+        const result = await omni.setShippingAddress(checkout.id, addressWithZone);
         setCheckout(result.checkout);
+
+        // Debug: הצג מה הוחזר מהשרת
+        console.log('🚚 Shipping Rates from server:', result.rates);
+        console.log('📦 Number of rates:', result.rates?.length || 0);
 
         // Use returned rates or fallback to demo option
         const rates = result.rates && result.rates.length > 0
           ? result.rates
           : [fallbackShippingRate];
+
+        console.log('✅ Using rates:', rates);
 
         setShippingRates(rates);
         setStep('shipping');
@@ -514,6 +563,25 @@ export default function CheckoutPage() {
                     value={address.line2}
                     onChange={(e) => setAddress({ ...address, line2: e.target.value })}
                   />
+
+                  {/* Shipping Zone Selection */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">אזור משלוח *</label>
+                    <select
+                      required
+                      value={selectedZone}
+                      onChange={(e) => setSelectedZone(e.target.value)}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="">בחר אזור</option>
+                      {shippingZones.map((zone) => (
+                        <option key={zone.id} value={zone.id}>
+                          {zone.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <Input
                       placeholder="עיר *"

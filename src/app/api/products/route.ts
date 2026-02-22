@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const BRAINERCE_API = 'https://api.brainerce.com';
-const CONNECTION_ID = 'vc_tYZpo6sTEQL6y8aWRltQj';
+const CONNECTION_ID = 'vc_Qyklbs620yrtzhmgqoYUK';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
 

@@ -29,7 +29,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/animate-ui/components/animate/tabs';
-import type { Product } from 'omni-sync-sdk';
+import type { Product } from 'brainerce';
 
 const PRODUCTS_PER_PAGE = 50;
 
