@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { CheckoutPaymentForm } from '@/components/checkout/payment-form';
+import { GrowPaymentForm } from '@/components/checkout/grow-payment-form';
 import type { Checkout, ShippingRate } from 'brainerce';
 
 type CheckoutStep = 'info' | 'shipping' | 'payment';
@@ -77,8 +78,10 @@ export default function CheckoutPage() {
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'bank_transfer'>('card');
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'bank_transfer' | 'grow'>('card');
   const [hasStripeProvider, setHasStripeProvider] = useState(false);
+  const [hasGrowProvider, setHasGrowProvider] = useState(false);
+  const [growPaymentUrl, setGrowPaymentUrl] = useState<string | null>(null);
 
   // Demo mode flag (when API is unavailable)
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -314,41 +317,79 @@ export default function CheckoutPage() {
       if (!isDemoMode && checkout && selectedRate !== 'demo-self-pickup') {
         await omni.selectShippingMethod(checkout.id, selectedRate);
 
-        // Get payment providers and initialize Stripe
+        // Get payment providers and initialize payment
         try {
           const { hasPayments, providers } = await omni.getPaymentProviders();
 
-          if (hasPayments) {
-            const stripeProvider = providers.find((p) => p.provider === 'stripe');
-            if (stripeProvider) {
-              setHasStripeProvider(true);
-              const stripe = loadStripe(stripeProvider.publicKey, {
-                stripeAccount: stripeProvider.stripeAccountId,
-              });
-              setStripePromise(stripe);
+          // Debug: הצג מה יש ב-providers
+          console.log('🔍 Payment Providers:', { hasPayments, providers });
+          console.log('📋 Providers list:', providers?.map(p => ({ provider: p.provider, name: p.name })));
 
-              // Create payment intent
-              const { clientSecret: secret } = await omni.createPaymentIntent(checkout.id);
-              setClientSecret(secret);
+          if (hasPayments) {
+            // Check for Grow provider first
+            const growProvider = providers.find((p) => p.provider === 'grow');
+            console.log('🌱 Grow Provider found:', growProvider);
+
+            if (growProvider) {
+              setHasGrowProvider(true);
+              setPaymentMethod('grow');
+
+              // Create payment intent with Grow
+              const result = await omni.createPaymentIntent(checkout.id) as { paymentUrl?: string; clientSecret?: string };
+              console.log('💳 Grow Payment Intent result:', result);
+
+              if (result.paymentUrl) {
+                setGrowPaymentUrl(result.paymentUrl);
+              }
+            } else {
+              // Fallback to Stripe if Grow not available
+              const stripeProvider = providers.find((p) => p.provider === 'stripe');
+              if (stripeProvider) {
+                setHasStripeProvider(true);
+                setPaymentMethod('card');
+                const stripe = loadStripe(stripeProvider.publicKey, {
+                  stripeAccount: stripeProvider.stripeAccountId,
+                });
+                setStripePromise(stripe);
+
+                // Create payment intent
+                const { clientSecret: secret } = await omni.createPaymentIntent(checkout.id);
+                setClientSecret(secret);
+              }
             }
+          } else {
+            // No payment providers configured
+            console.warn('❌ No payment providers configured');
+            setHasStripeProvider(false);
+            setHasGrowProvider(false);
+            setError('לא הוגדר ספק תשלומים. אנא צור קשר עם שירות הלקוחות.');
+            setIsLoading(false);
+            return;
           }
-        } catch {
-          // No payment providers configured - bank transfer only
+        } catch (err) {
+          // No payment providers configured
+          console.error('❌ Error getting payment providers:', err);
           setHasStripeProvider(false);
-          setPaymentMethod('bank_transfer');
+          setHasGrowProvider(false);
+          setError('שגיאה בטעינת אפשרויות התשלום. אנא נסה שנית.');
+          setIsLoading(false);
+          return;
         }
       } else {
-        // Demo mode - only bank transfer available
+        // Demo mode - show error
+        console.warn('❌ Demo mode - no payment providers');
         setHasStripeProvider(false);
-        setPaymentMethod('bank_transfer');
+        setHasGrowProvider(false);
+        setError('לא ניתן לבצע תשלום במצב דמו. אנא הגדר ספק תשלומים.');
+        setIsLoading(false);
+        return;
       }
 
       setStep('payment');
     } catch (err) {
-      // On error, allow demo mode to continue
-      setHasStripeProvider(false);
-      setPaymentMethod('bank_transfer');
-      setStep('payment');
+      console.error('❌ Checkout error:', err);
+      setError('אירעה שגיאה. אנא נסה שנית.');
+      setIsLoading(false);
     } finally {
       setIsLoading(false);
     }
@@ -696,6 +737,31 @@ export default function CheckoutPage() {
                 <div className="space-y-3 mb-6">
                   <p className="text-sm font-medium text-muted-foreground mb-3">בחר אמצעי תשלום:</p>
 
+                  {hasGrowProvider && (
+                    <label
+                      className={cn(
+                        'flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors',
+                        paymentMethod === 'grow'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/50'
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="grow"
+                        checked={paymentMethod === 'grow'}
+                        onChange={() => setPaymentMethod('grow')}
+                        className="w-4 h-4"
+                      />
+                      <CreditCard className="h-5 w-5" />
+                      <div>
+                        <p className="font-medium">כרטיס אשראי</p>
+                        <p className="text-sm text-muted-foreground">תשלום מאובטח באמצעות Grow</p>
+                      </div>
+                    </label>
+                  )}
+
                   {hasStripeProvider && (
                     <label
                       className={cn(
@@ -720,29 +786,6 @@ export default function CheckoutPage() {
                       </div>
                     </label>
                   )}
-
-                  <label
-                    className={cn(
-                      'flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors',
-                      paymentMethod === 'bank_transfer'
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="bank_transfer"
-                      checked={paymentMethod === 'bank_transfer'}
-                      onChange={() => setPaymentMethod('bank_transfer')}
-                      className="w-4 h-4"
-                    />
-                    <Banknote className="h-5 w-5" />
-                    <div>
-                      <p className="font-medium">העברה בנקאית / תשלום בעת קבלה</p>
-                      <p className="text-sm text-muted-foreground">ההזמנה תישמר ותטופל לאחר אישור התשלום</p>
-                    </div>
-                  </label>
                 </div>
 
                 <Separator className="my-6" />
@@ -753,7 +796,19 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                {paymentMethod === 'card' && hasStripeProvider ? (
+                {paymentMethod === 'grow' && hasGrowProvider ? (
+                  growPaymentUrl ? (
+                    <GrowPaymentForm
+                      checkoutId={checkout?.id || ''}
+                      growPaymentUrl={growPaymentUrl}
+                      onBack={() => setStep('shipping')}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  )
+                ) : paymentMethod === 'card' && hasStripeProvider ? (
                   stripePromise && clientSecret ? (
                     <Elements
                       stripe={stripePromise}
@@ -781,10 +836,9 @@ export default function CheckoutPage() {
                   )
                 ) : (
                   <div className="space-y-4">
-                    <div className="p-4 bg-muted rounded-lg">
-                      <p className="text-sm">
-                        לאחר השלמת ההזמנה, תקבל אימייל עם פרטי ההעברה הבנקאית.
-                        ההזמנה תטופל לאחר אישור קבלת התשלום.
+                    <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+                      <p className="text-sm text-destructive font-medium">
+                        לא הוגדר ספק תשלומים. אנא צור קשר עם שירות הלקוחות.
                       </p>
                     </div>
                     <div className="flex gap-3">
@@ -794,20 +848,6 @@ export default function CheckoutPage() {
                         disabled={isLoading}
                       >
                         חזרה
-                      </Button>
-                      <Button
-                        className="flex-1"
-                        onClick={handleBankTransferCheckout}
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="h-4 w-4 me-2 animate-spin" />
-                            מעבד...
-                          </>
-                        ) : (
-                          'סיים הזמנה'
-                        )}
                       </Button>
                     </div>
                   </div>
