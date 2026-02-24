@@ -52,20 +52,44 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
   const productWithPrice = product as unknown as { basePrice?: number; salePrice?: number | null; price?: number };
   const variants = product.variants || [];
   const hasVariants = variants.length > 0;
-  const prices = hasVariants
+
+  // Calculate prices including sale prices
+  const basePrices = hasVariants
     ? variants.map((v) => {
-        const variant = v as unknown as { price?: number; salePrice?: number | null; basePrice?: number };
-        return variant.price ?? variant.salePrice ?? variant.basePrice ?? 0;
+        const variant = v as unknown as { price?: number; basePrice?: number };
+        return variant.basePrice ?? variant.price ?? 0;
+      }).filter((p): p is number => p != null && p > 0)
+    : [productWithPrice.basePrice ?? productWithPrice.price ?? 0];
+
+  const salePrices = hasVariants
+    ? variants.map((v) => {
+        const variant = v as unknown as { salePrice?: number | null; price?: number; basePrice?: number };
+        return variant.salePrice ?? variant.price ?? variant.basePrice ?? 0;
       }).filter((p): p is number => p != null && p > 0)
     : [productWithPrice.salePrice ?? productWithPrice.basePrice ?? productWithPrice.price ?? 0];
-  const validPrices = prices.length > 0 ? prices : [0];
-  const minPrice = Math.min(...validPrices);
-  const maxPrice = Math.max(...validPrices);
-  const isPriceRange = minPrice !== maxPrice;
+
+  const validBasePrices = basePrices.length > 0 ? basePrices : [0];
+  const validSalePrices = salePrices.length > 0 ? salePrices : [0];
+
+  const minBasePrice = Math.min(...validBasePrices);
+  const maxBasePrice = Math.max(...validBasePrices);
+  const minSalePrice = Math.min(...validSalePrices);
+  const maxSalePrice = Math.max(...validSalePrices);
+
+  // Check if there's a discount
+  const hasDiscount = productWithPrice.salePrice != null &&
+    productWithPrice.basePrice != null &&
+    productWithPrice.salePrice < productWithPrice.basePrice;
+
+  const discountPercent = hasDiscount && productWithPrice.basePrice && productWithPrice.salePrice
+    ? Math.round((1 - productWithPrice.salePrice / productWithPrice.basePrice) * 100)
+    : 0;
+
+  const isPriceRange = minSalePrice !== maxSalePrice;
   const priceDisplay =
     isPriceRange
-      ? formatPriceRange(minPrice, maxPrice)
-      : formatPrice(minPrice);
+      ? formatPriceRange(minSalePrice, maxSalePrice)
+      : formatPrice(minSalePrice);
 
   // Mock rating data (can be replaced with real data when available)
   // Use deterministic hash for review count to prevent hydration mismatch
@@ -101,7 +125,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
         productId: product.id,
         name: product.name,
         image: product.images?.[0]?.url,
-        price: minPrice,
+        price: minSalePrice,
       });
     }
   };
@@ -244,13 +268,14 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
             </motion.button>
 
             {/* Featured/Sale badge */}
-            {(isFeatured || (productWithPrice.salePrice && productWithPrice.basePrice && productWithPrice.basePrice > productWithPrice.salePrice)) && (
-              <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10">
-                {productWithPrice.salePrice && productWithPrice.basePrice && productWithPrice.basePrice > productWithPrice.salePrice ? (
-                  <span className="bg-destructive text-destructive-foreground px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold shadow-lg">
-                    -{Math.round((1 - productWithPrice.salePrice / productWithPrice.basePrice) * 100)}%
+            {(isFeatured || hasDiscount) && (
+              <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 flex flex-col gap-1">
+                {hasDiscount && discountPercent > 0 && (
+                  <span className="bg-red-500 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold shadow-lg animate-pulse">
+                    🔥 -{discountPercent}%
                   </span>
-                ) : isFeatured ? (
+                )}
+                {isFeatured && !hasDiscount && (
                   <span className={cn(
                     "px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-medium shadow-md",
                     isLight
@@ -259,7 +284,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
                   )}>
                     מומלץ
                   </span>
-                ) : null}
+                )}
               </div>
             )}
 
@@ -315,18 +340,27 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
 
             {/* Price and Add to Cart */}
             <div className="flex items-center justify-between pt-1 sm:pt-2 gap-2">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-                <span className={cn(
-                  "font-bold whitespace-nowrap",
-                  isPriceRange ? "text-sm sm:text-lg" : "text-base sm:text-2xl",
-                  isLight ? "text-neutral-900" : "text-white"
-                )}>{priceDisplay}</span>
-                {productWithPrice.salePrice && productWithPrice.basePrice && productWithPrice.basePrice > productWithPrice.salePrice && (
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
                   <span className={cn(
-                    "text-xs sm:text-sm line-through",
-                    isLight ? "text-neutral-500" : "text-white/60"
-                  )}>
-                    {formatPrice(productWithPrice.basePrice)}
+                    "font-bold whitespace-nowrap",
+                    isPriceRange ? "text-sm sm:text-lg" : "text-base sm:text-2xl",
+                    hasDiscount
+                      ? "text-red-500"
+                      : isLight ? "text-neutral-900" : "text-white"
+                  )}>{priceDisplay}</span>
+                  {hasDiscount && productWithPrice.basePrice && (
+                    <span className={cn(
+                      "text-xs sm:text-sm line-through",
+                      isLight ? "text-neutral-400" : "text-white/50"
+                    )}>
+                      {formatPrice(productWithPrice.basePrice)}
+                    </span>
+                  )}
+                </div>
+                {hasDiscount && discountPercent > 0 && (
+                  <span className="text-[10px] sm:text-xs text-green-600 dark:text-green-400 font-medium">
+                    חסכת {formatPrice((productWithPrice.basePrice || 0) - (productWithPrice.salePrice || 0))}
                   </span>
                 )}
               </div>

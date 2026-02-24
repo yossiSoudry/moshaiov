@@ -147,57 +147,62 @@ export default function CheckoutPage() {
           ? selectedIndices.map(i => cart.items[i]).filter(Boolean)
           : cart.items;
 
-        // Check for existing cart (may have coupon applied)
-        let cartId = getCartId();
-        let needToCreateCart = !cartId;
+        // Prepare items for guest checkout
+        const checkoutItems = itemsToCheckout.map(item => ({
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+        }));
 
-        // If cartId exists, verify it's still valid by trying to create checkout
-        if (cartId && !needToCreateCart) {
+        // Use startGuestCheckout for guest users (works with localStorage cart data)
+        const guestCheckoutResult = await omni.startGuestCheckout(checkoutItems);
+
+        // Check if checkout was tracked successfully
+        if (!guestCheckoutResult.tracked) {
+          console.warn('Guest checkout not tracked:', guestCheckoutResult.message);
+          setIsDemoMode(true);
+          setIsLoading(false);
+          return;
+        }
+
+        // Store the cart ID
+        if (guestCheckoutResult.cartId) {
+          setCartId(guestCheckoutResult.cartId);
+        }
+
+        // Apply coupon from cart if exists (apply to the server cart, not checkout)
+        if (cart.couponCode && guestCheckoutResult.cartId) {
           try {
-            const checkoutData = await omni.createCheckout({ cartId });
-            setCheckout(checkoutData);
-
-            // Handle reservation info if present
-            const reservation = (checkoutData as unknown as { reservation?: { hasReservation?: boolean; remainingSeconds?: number; countdownMessage?: string } }).reservation;
-            if (reservation?.hasReservation && reservation.remainingSeconds) {
-              setReservationRemaining(reservation.remainingSeconds);
-              setReservationMessage(reservation.countdownMessage || '');
-            }
-
-            setIsLoading(false);
-            return; // Success - exit early
-          } catch (err) {
-            console.warn('Existing cart not found, creating new cart:', err);
-            clearCartId();
-            needToCreateCart = true;
+            await omni.applyCoupon(guestCheckoutResult.cartId, cart.couponCode);
+            console.log('🎫 Coupon applied to cart:', cart.couponCode);
+          } catch (couponErr) {
+            console.warn('Failed to apply coupon to cart:', couponErr);
           }
         }
 
-        // Create new cart if needed
-        if (needToCreateCart) {
-          const apiCart = await omni.createCart();
-          cartId = apiCart.id;
-          setCartId(cartId);
+        // Get the full checkout data using the checkout ID (after coupon applied)
+        const checkoutData = await omni.getCheckout(guestCheckoutResult.checkoutId);
+        setCheckout(checkoutData);
 
-          // Add selected items to server cart
-          for (const item of itemsToCheckout) {
-            await omni.addToCart(cartId, {
-              productId: item.productId,
-              variantId: item.variantId,
-              quantity: item.quantity,
-            });
-          }
+        // Debug: הצג מידע על הנחות
+        console.log('🎫 Guest checkout created:', {
+          checkoutId: guestCheckoutResult.checkoutId,
+          subtotal: checkoutData.subtotal,
+          discountAmount: checkoutData.discountAmount,
+          couponCode: checkoutData.couponCode,
+          total: checkoutData.total,
+          lineItems: checkoutData.lineItems?.map((item: { product?: { name?: string }; unitPrice?: string; discountAmount?: string }) => ({
+            name: item.product?.name,
+            unitPrice: item.unitPrice,
+            discountAmount: item.discountAmount,
+          })),
+        });
 
-          // Create checkout from new cart
-          const checkoutData = await omni.createCheckout({ cartId });
-          setCheckout(checkoutData);
-
-          // Handle reservation info if present
-          const reservation = (checkoutData as unknown as { reservation?: { hasReservation?: boolean; remainingSeconds?: number; countdownMessage?: string } }).reservation;
-          if (reservation?.hasReservation && reservation.remainingSeconds) {
-            setReservationRemaining(reservation.remainingSeconds);
-            setReservationMessage(reservation.countdownMessage || '');
-          }
+        // Handle reservation info if present
+        const reservation = (checkoutData as unknown as { reservation?: { hasReservation?: boolean; remainingSeconds?: number; countdownMessage?: string } }).reservation;
+        if (reservation?.hasReservation && reservation.remainingSeconds) {
+          setReservationRemaining(reservation.remainingSeconds);
+          setReservationMessage(reservation.countdownMessage || '');
         }
       } catch (err) {
         console.error('Checkout init error:', err);
@@ -898,6 +903,12 @@ export default function CheckoutPage() {
                         {variantName && (
                           <p className="text-xs text-muted-foreground">
                             {variantName}
+                          </p>
+                        )}
+                        {/* Show line item discount if exists */}
+                        {parseFloat((item as { discountAmount?: string }).discountAmount || '0') > 0 && (
+                          <p className="text-xs text-green-600 dark:text-green-400">
+                            הנחה: -{formatPrice(parseFloat((item as { discountAmount?: string }).discountAmount || '0'))}
                           </p>
                         )}
                       </div>

@@ -312,14 +312,29 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
               <h1 className="text-2xl lg:text-3xl font-bold mb-4">{product.name}</h1>
 
               {/* Price */}
-              <div className="flex items-center gap-3 mb-6">
-                <span className="text-2xl lg:text-3xl font-bold">
-                  {formatPrice(Number(currentPrice))}
-                </span>
-                {hasDiscount && (
-                  <span className="text-lg text-muted-foreground line-through">
-                    {formatPrice(compareAtPrice)}
+              <div className="mb-6">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className={cn(
+                    "text-2xl lg:text-3xl font-bold",
+                    hasDiscount && "text-red-500"
+                  )}>
+                    {formatPrice(Number(currentPrice))}
                   </span>
+                  {hasDiscount && compareAtPrice && (
+                    <>
+                      <span className="text-lg text-muted-foreground line-through">
+                        {formatPrice(compareAtPrice)}
+                      </span>
+                      <Badge variant="destructive" className="text-sm px-3 py-1">
+                        -{Math.round((1 - currentPrice / compareAtPrice) * 100)}%
+                      </Badge>
+                    </>
+                  )}
+                </div>
+                {hasDiscount && compareAtPrice && (
+                  <p className="text-sm text-green-600 dark:text-green-400 mt-2 font-medium">
+                    🎉 חסכת {formatPrice(compareAtPrice - currentPrice)}
+                  </p>
                 )}
               </div>
 

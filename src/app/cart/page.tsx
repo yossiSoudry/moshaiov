@@ -14,30 +14,43 @@ import {
   Tag,
   ArrowLeft,
   Check,
+  X,
+  Percent,
 } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { omni, isLoggedIn, getCartId, setCartId } from '@/lib/omni-sync';
-import type { Cart } from 'brainerce';
 
 export default function CartPage() {
   const router = useRouter();
-  const { cart, isLoading, updateQuantity, removeItem, error } = useCartStore();
+  const {
+    cart,
+    isLoading,
+    updateQuantity,
+    removeItem,
+    applyCoupon,
+    removeCoupon,
+    initCart,
+    error,
+  } = useCartStore();
+
   const [couponCode, setCouponCode] = useState('');
   const [couponError, setCouponError] = useState('');
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
-  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
-  const [discountAmount, setDiscountAmount] = useState(0);
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
-  const [serverCart, setServerCart] = useState<Cart | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const items = cart?.items || [];
   const subtotal = cart?.subtotal ? parseFloat(cart.subtotal) : 0;
-  const total = subtotal - discountAmount;
+  const discountAmount = cart?.discountAmount ? parseFloat(cart.discountAmount) : 0;
+  const appliedCoupon = cart?.couponCode || null;
+
+  // Initialize cart on mount
+  useEffect(() => {
+    initCart();
+  }, [initCart]);
 
   // Initialize selected indices when items change
   useEffect(() => {
@@ -72,7 +85,12 @@ export default function CartPage() {
     return sum;
   }, 0);
 
-  // Apply coupon - requires server cart
+  // Calculate selected discount (proportional to selected items)
+  const selectedDiscount = discountAmount > 0 && subtotal > 0
+    ? (selectedSubtotal / subtotal) * discountAmount
+    : 0;
+
+  // Apply coupon
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponCode.trim()) return;
@@ -81,30 +99,7 @@ export default function CartPage() {
     setCouponError('');
 
     try {
-      // First, ensure we have a server cart
-      let cartId = getCartId();
-
-      if (!cartId) {
-        // Create server cart and add local items
-        const apiCart = await omni.createCart();
-        cartId = apiCart.id;
-        setCartId(cartId);
-
-        // Add local items to server cart
-        for (const item of items) {
-          await omni.addToCart(cartId, {
-            productId: item.productId,
-            variantId: item.variantId,
-            quantity: item.quantity,
-          });
-        }
-      }
-
-      // Apply coupon to server cart
-      const updatedCart = await omni.applyCoupon(cartId, couponCode.trim());
-      setServerCart(updatedCart);
-      setAppliedCoupon(updatedCart.couponCode || couponCode.trim());
-      setDiscountAmount(parseFloat(updatedCart.discountAmount || '0'));
+      await applyCoupon(couponCode.trim());
       setCouponCode('');
     } catch (err) {
       setCouponError(err instanceof Error ? err.message : 'קוד קופון לא תקין');
@@ -115,59 +110,25 @@ export default function CartPage() {
 
   // Remove coupon
   const handleRemoveCoupon = async () => {
-    const cartId = getCartId();
-    if (!cartId) return;
-
     try {
-      const updatedCart = await omni.removeCoupon(cartId);
-      setServerCart(updatedCart);
-      setAppliedCoupon(null);
-      setDiscountAmount(0);
+      await removeCoupon();
     } catch (err) {
       console.error('Failed to remove coupon:', err);
     }
   };
 
-  // Handle checkout - create checkout with selected items only
+  // Handle checkout
   const handleCheckout = async () => {
     if (selectedIndices.length === 0) return;
 
     setIsCheckingOut(true);
 
     try {
-      if (isLoggedIn()) {
-        // Logged-in user: create server cart first if needed
-        let cartId = getCartId();
-
-        if (!cartId) {
-          const apiCart = await omni.createCart();
-          cartId = apiCart.id;
-          setCartId(cartId);
-
-          // Add only selected items
-          for (const index of selectedIndices) {
-            const item = items[index];
-            await omni.addToCart(cartId, {
-              productId: item.productId,
-              variantId: item.variantId,
-              quantity: item.quantity,
-            });
-          }
-        }
-
-        // Store selected indices for checkout page
-        sessionStorage.setItem('checkoutSelectedIndices', JSON.stringify(selectedIndices));
-        router.push('/checkout');
-      } else {
-        // Guest user: use startGuestCheckout with selectedIndices
-        sessionStorage.setItem('checkoutSelectedIndices', JSON.stringify(selectedIndices));
-        router.push('/checkout');
-      }
-    } catch (err) {
-      console.error('Checkout error:', err);
-      // Fallback: just navigate to checkout
+      // Store selected indices for checkout page
       sessionStorage.setItem('checkoutSelectedIndices', JSON.stringify(selectedIndices));
       router.push('/checkout');
+    } catch (err) {
+      console.error('Checkout error:', err);
     } finally {
       setIsCheckingOut(false);
     }
@@ -245,105 +206,147 @@ export default function CartPage() {
             </div>
 
             <AnimatePresence>
-              {items.map((item, index) => (
-                <motion.div
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -100 }}
-                  className={`flex gap-4 p-4 bg-background border rounded-xl transition-colors ${
-                    selectedIndices.includes(index) ? 'border-primary/50' : 'border-border'
-                  }`}
-                >
-                  {/* Checkbox */}
-                  <button
-                    onClick={() => toggleItem(index)}
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1 transition-colors ${
-                      selectedIndices.includes(index)
-                        ? 'bg-primary border-primary text-primary-foreground'
-                        : 'border-muted-foreground hover:border-primary'
+              {items.map((item, index) => {
+                const itemDiscount = item.discountAmount ? parseFloat(item.discountAmount) : 0;
+                const hasDiscount = itemDiscount > 0;
+
+                return (
+                  <motion.div
+                    key={item.id}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    className={`flex gap-4 p-4 bg-background border rounded-xl transition-colors ${
+                      selectedIndices.includes(index) ? 'border-primary/50' : 'border-border'
                     }`}
                   >
-                    {selectedIndices.includes(index) && <Check className="h-3 w-3" />}
-                  </button>
-                  {/* Image */}
-                  <Link
-                    href={`/products/${(item.product as { slug?: string } | undefined)?.slug || item.productId}`}
-                    className="relative w-24 h-24 sm:w-32 sm:h-32 bg-muted rounded-lg overflow-hidden flex-shrink-0"
-                  >
-                    {(item.product?.images as { url?: string }[] | undefined)?.[0]?.url ? (
-                      <Image
-                        src={(item.product?.images as { url: string }[])[0].url}
-                        alt={item.product?.name || 'מוצר'}
-                        fill
-                        className="object-cover"
-                        sizes="128px"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                        <ShoppingBag className="h-8 w-8" />
-                      </div>
-                    )}
-                  </Link>
-
-                  {/* Details */}
-                  <div className="flex-1 min-w-0">
-                    <Link
-                      href={`/products/${(item.product as { slug?: string } | undefined)?.slug || item.productId}`}
-                      className="font-medium hover:text-primary transition-colors line-clamp-2"
+                    {/* Checkbox */}
+                    <button
+                      onClick={() => toggleItem(index)}
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1 transition-colors ${
+                        selectedIndices.includes(index)
+                          ? 'bg-primary border-primary text-primary-foreground'
+                          : 'border-muted-foreground hover:border-primary'
+                      }`}
                     >
-                      {item.product?.name || 'מוצר'}
-                    </Link>
-                    {item.variant && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {item.variant.name}
-                      </p>
-                    )}
-                    <p className="font-semibold mt-2">
-                      {formatPrice(parseFloat(item.unitPrice) || 0)}
-                    </p>
+                      {selectedIndices.includes(index) && <Check className="h-3 w-3" />}
+                    </button>
 
-                    {/* Quantity controls */}
-                    <div className="flex items-center justify-between mt-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          disabled={item.quantity <= 1 || isLoading}
-                          className="p-1.5 border border-border rounded hover:bg-muted transition-colors disabled:opacity-50"
-                        >
-                          <Minus className="h-4 w-4" />
-                        </button>
-                        <span className="w-10 text-center font-medium">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          disabled={isLoading}
-                          className="p-1.5 border border-border rounded hover:bg-muted transition-colors"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </button>
+                    {/* Image */}
+                    <Link
+                      href={`/products/${item.product?.slug || item.productId}`}
+                      className="relative w-24 h-24 sm:w-32 sm:h-32 bg-muted rounded-lg overflow-hidden flex-shrink-0"
+                    >
+                      {item.product?.images?.[0]?.url ? (
+                        <Image
+                          src={item.product.images[0].url}
+                          alt={item.product?.name || 'מוצר'}
+                          fill
+                          className="object-cover"
+                          sizes="128px"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          <ShoppingBag className="h-8 w-8" />
+                        </div>
+                      )}
+
+                      {/* Discount badge on image */}
+                      {hasDiscount && (
+                        <div className="absolute top-1 right-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                          <Percent className="h-3 w-3" />
+                        </div>
+                      )}
+                    </Link>
+
+                    {/* Details */}
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        href={`/products/${item.product?.slug || item.productId}`}
+                        className="font-medium hover:text-primary transition-colors line-clamp-2"
+                      >
+                        {item.product?.name || 'מוצר'}
+                      </Link>
+                      {item.variant && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {item.variant.name}
+                        </p>
+                      )}
+
+                      {/* Price with discount */}
+                      <div className="mt-2">
+                        {hasDiscount ? (
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-green-600 dark:text-green-400">
+                              {formatPrice(parseFloat(item.unitPrice) - itemDiscount)}
+                            </p>
+                            <p className="text-sm text-muted-foreground line-through">
+                              {formatPrice(parseFloat(item.unitPrice))}
+                            </p>
+                            <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded">
+                              -{formatPrice(itemDiscount)}
+                            </span>
+                          </div>
+                        ) : (
+                          <p className="font-semibold">
+                            {formatPrice(parseFloat(item.unitPrice))}
+                          </p>
+                        )}
                       </div>
 
-                      <button
-                        onClick={() => removeItem(item.id)}
-                        disabled={isLoading}
-                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </div>
+                      {/* Quantity controls */}
+                      <div className="flex items-center justify-between mt-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            disabled={item.quantity <= 1 || isLoading}
+                            className="p-1.5 border border-border rounded hover:bg-muted transition-colors disabled:opacity-50"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <span className="w-10 text-center font-medium">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            disabled={isLoading}
+                            className="p-1.5 border border-border rounded hover:bg-muted transition-colors"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
 
-                  {/* Item total - desktop */}
-                  <div className="hidden sm:block text-left min-w-25">
-                    <p className="font-semibold">
-                      {formatPrice((parseFloat(item.unitPrice) || 0) * item.quantity)}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
+                        <button
+                          onClick={() => removeItem(item.id)}
+                          disabled={isLoading}
+                          className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Item total - desktop */}
+                    <div className="hidden sm:block text-left min-w-25">
+                      {hasDiscount ? (
+                        <div>
+                          <p className="font-semibold text-green-600 dark:text-green-400">
+                            {formatPrice((parseFloat(item.unitPrice) - itemDiscount) * item.quantity)}
+                          </p>
+                          <p className="text-xs text-muted-foreground line-through">
+                            {formatPrice(parseFloat(item.unitPrice) * item.quantity)}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="font-semibold">
+                          {formatPrice(parseFloat(item.unitPrice) * item.quantity)}
+                        </p>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </div>
 
@@ -351,6 +354,14 @@ export default function CartPage() {
           <div className="lg:col-span-1">
             <div className="sticky top-24 bg-muted rounded-xl p-6 space-y-4">
               <h2 className="text-lg font-semibold">סיכום הזמנה</h2>
+
+              {/* Automatic discount banner */}
+              {discountAmount > 0 && !appliedCoupon && (
+                <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/30 p-3 rounded-lg text-green-700 dark:text-green-400">
+                  <Percent className="h-4 w-4" />
+                  <span className="text-sm font-medium">הנחה אוטומטית הופעלה!</span>
+                </div>
+              )}
 
               {/* Coupon */}
               {appliedCoupon ? (
@@ -361,9 +372,9 @@ export default function CartPage() {
                   </div>
                   <button
                     onClick={handleRemoveCoupon}
-                    className="text-red-500 hover:text-red-600 text-sm font-medium"
+                    className="text-red-500 hover:text-red-600"
                   >
-                    הסר
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
               ) : (
@@ -378,7 +389,7 @@ export default function CartPage() {
                       className="ps-10"
                     />
                   </div>
-                  <Button type="submit" variant="outline" disabled={isApplyingCoupon}>
+                  <Button type="submit" variant="outline" disabled={isApplyingCoupon || isLoading}>
                     {isApplyingCoupon ? '...' : 'החל'}
                   </Button>
                 </form>
@@ -400,12 +411,18 @@ export default function CartPage() {
                   </span>
                   <span>{formatPrice(selectedSubtotal)}</span>
                 </div>
-                {discountAmount > 0 && (
+
+                {/* Show discount */}
+                {selectedDiscount > 0 && (
                   <div className="flex justify-between text-green-600 dark:text-green-400">
-                    <span>הנחה</span>
-                    <span>-{formatPrice(discountAmount)}</span>
+                    <span className="flex items-center gap-1">
+                      <Percent className="h-3 w-3" />
+                      הנחה {appliedCoupon && `(${appliedCoupon})`}
+                    </span>
+                    <span>-{formatPrice(selectedDiscount)}</span>
                   </div>
                 )}
+
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">משלוח</span>
                   <span className="text-muted-foreground">יחושב בהמשך</span>
@@ -420,14 +437,14 @@ export default function CartPage() {
 
               <div className="flex justify-between text-lg font-semibold">
                 <span>סה״כ לתשלום</span>
-                <span>{formatPrice(selectedSubtotal - discountAmount)}</span>
+                <span>{formatPrice(selectedSubtotal - selectedDiscount)}</span>
               </div>
 
               <Button
                 size="lg"
                 className="w-full"
                 onClick={handleCheckout}
-                disabled={selectedIndices.length === 0 || isCheckingOut}
+                disabled={selectedIndices.length === 0 || isCheckingOut || isLoading}
               >
                 {isCheckingOut ? (
                   'מעבד...'

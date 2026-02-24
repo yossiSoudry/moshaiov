@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
-import { X, Plus, Minus, Trash2, ShoppingBag, Diamond, Sparkles, ArrowLeft } from 'lucide-react';
+import { X, Plus, Minus, Trash2, ShoppingBag, Diamond, Sparkles, ArrowLeft, Tag, Percent } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/utils';
@@ -18,6 +18,9 @@ export function CartDrawer() {
 
   const items = cart?.items || [];
   const subtotal = cart?.subtotal ? parseFloat(cart.subtotal) : 0;
+  const discountAmount = cart?.discountAmount ? parseFloat(cart.discountAmount) : 0;
+  const couponCode = cart?.couponCode || null;
+  const total = subtotal - discountAmount;
 
   // RTL: drawer comes from the left side (visual right in RTL)
   const drawerVariants = {
@@ -138,7 +141,11 @@ export function CartDrawer() {
                     {items.map((item, index) => {
                       const productImages = item.product?.images as { url?: string }[] | undefined;
                       const firstImage = productImages?.[0];
-                      const itemPrice = parseFloat(item.unitPrice || '0') * item.quantity;
+                      const unitPrice = parseFloat(item.unitPrice || '0');
+                      const itemDiscount = item.discountAmount ? parseFloat(item.discountAmount) : 0;
+                      const hasItemDiscount = itemDiscount > 0;
+                      const itemPrice = unitPrice * item.quantity;
+                      const itemPriceAfterDiscount = (unitPrice - itemDiscount) * item.quantity;
                       return (
                         <motion.div
                           key={item.id}
@@ -207,9 +214,20 @@ export function CartDrawer() {
                               </div>
 
                               {/* Price */}
-                              <p className="font-bold text-gold-600">
-                                {formatPrice(itemPrice)}
-                              </p>
+                              {hasItemDiscount ? (
+                                <div className="text-left">
+                                  <p className="font-bold text-green-600 dark:text-green-400">
+                                    {formatPrice(itemPriceAfterDiscount)}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground line-through">
+                                    {formatPrice(itemPrice)}
+                                  </p>
+                                </div>
+                              ) : (
+                                <p className="font-bold text-gold-600">
+                                  {formatPrice(itemPrice)}
+                                </p>
+                              )}
                             </div>
                           </div>
 
@@ -238,10 +256,47 @@ export function CartDrawer() {
                 animate={{ opacity: 1, y: 0 }}
                 className="border-t border-border/50 p-5 bg-gradient-to-t from-muted/30 to-transparent space-y-4"
               >
+                {/* Coupon badge */}
+                {couponCode && (
+                  <div className="flex items-center gap-2 p-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <Tag className="h-4 w-4 text-green-500" />
+                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                      קופון: {couponCode}
+                    </span>
+                  </div>
+                )}
+
+                {/* Automatic discount badge (when no coupon) */}
+                {discountAmount > 0 && !couponCode && (
+                  <div className="flex items-center gap-2 p-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <Percent className="h-4 w-4 text-green-500" />
+                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                      הנחה אוטומטית הופעלה!
+                    </span>
+                  </div>
+                )}
+
                 {/* Subtotal */}
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">סה״כ ביניים</span>
-                  <span className="text-2xl font-bold">{formatPrice(subtotal)}</span>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">סה״כ מוצרים</span>
+                  <span>{formatPrice(subtotal)}</span>
+                </div>
+
+                {/* Discount */}
+                {discountAmount > 0 && (
+                  <div className="flex items-center justify-between text-sm text-green-600 dark:text-green-400">
+                    <span className="flex items-center gap-1">
+                      <Percent className="h-3 w-3" />
+                      הנחה {couponCode && `(${couponCode})`}
+                    </span>
+                    <span>-{formatPrice(discountAmount)}</span>
+                  </div>
+                )}
+
+                {/* Total */}
+                <div className="flex items-center justify-between pt-2 border-t border-border/30">
+                  <span className="text-muted-foreground">סה״כ לתשלום</span>
+                  <span className="text-2xl font-bold">{formatPrice(total)}</span>
                 </div>
 
                 {/* Free shipping indicator */}

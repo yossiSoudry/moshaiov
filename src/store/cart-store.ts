@@ -2,11 +2,11 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { omni } from '@/lib/omni-sync';
-import type { Product } from 'brainerce';
+import { omni, getCartId, setCartId, clearCartId } from '@/lib/omni-sync';
+import type { Cart } from 'brainerce';
 
-// Local cart item structure
-interface LocalCartItem {
+// Unified cart item structure (works with both server and local cart)
+interface CartItemDisplay {
   id: string;
   productId: string;
   variantId?: string;
@@ -14,6 +14,7 @@ interface LocalCartItem {
   product: {
     id: string;
     name: string;
+    slug?: string;
     images?: { url: string }[];
   };
   variant?: {
@@ -21,43 +22,77 @@ interface LocalCartItem {
     name: string;
   };
   unitPrice: string;
+  discountAmount?: string; // From server cart - automatic discounts
 }
 
-// Local cart structure (mimics API cart)
-interface LocalCart {
+// Cart structure with discount support
+interface CartDisplay {
   id: string;
-  items: LocalCartItem[];
+  items: CartItemDisplay[];
   subtotal: string;
+  discountAmount?: string; // Total automatic discount
+  couponCode?: string;
+  total?: string;
   itemCount: number;
+  isServerCart: boolean;
 }
 
 interface CartState {
-  cart: LocalCart | null;
+  cart: CartDisplay | null;
   isLoading: boolean;
   isOpen: boolean;
   error: string | null;
+  serverCartId: string | null;
 
   // Actions
+  initCart: () => Promise<void>;
   addToCart: (productId: string, variantId?: string, quantity?: number) => Promise<void>;
-  updateQuantity: (itemId: string, quantity: number) => void;
-  removeItem: (itemId: string) => void;
+  updateQuantity: (itemId: string, quantity: number) => Promise<void>;
+  removeItem: (itemId: string) => Promise<void>;
   applyCoupon: (code: string) => Promise<void>;
+  removeCoupon: () => Promise<void>;
   clearCart: () => void;
+  syncCart: () => Promise<void>;
   toggleCart: () => void;
   openCart: () => void;
   closeCart: () => void;
 }
 
-// Generate unique ID
-const generateId = () => Math.random().toString(36).substring(2, 15);
+// Convert server cart to display format
+function serverCartToDisplay(cart: Cart): CartDisplay {
+  // Calculate total: subtotal - discount
+  const subtotal = parseFloat(cart.subtotal || '0');
+  const discount = parseFloat(cart.discountAmount || '0');
+  const calculatedTotal = subtotal - discount;
 
-// Calculate subtotal
-const calculateSubtotal = (items: LocalCartItem[]): string => {
-  const total = items.reduce((sum, item) => {
-    return sum + (parseFloat(item.unitPrice) * item.quantity);
-  }, 0);
-  return total.toString();
-};
+  return {
+    id: cart.id,
+    items: cart.items.map(item => ({
+      id: item.id,
+      productId: item.product?.id || '',
+      variantId: item.variant?.id,
+      quantity: item.quantity,
+      product: {
+        id: item.product?.id || '',
+        name: item.product?.name || '',
+        slug: (item.product as { slug?: string })?.slug || undefined,
+        images: item.product?.images,
+      },
+      variant: item.variant ? {
+        id: item.variant.id,
+        name: item.variant.name || '',
+      } : undefined,
+      unitPrice: item.unitPrice,
+      discountAmount: item.discountAmount,
+    })),
+    subtotal: cart.subtotal,
+    discountAmount: cart.discountAmount,
+    couponCode: cart.couponCode || undefined,
+    total: calculatedTotal.toString(),
+    itemCount: cart.items.reduce((sum, item) => sum + item.quantity, 0),
+    isServerCart: true,
+  };
+}
 
 export const useCartStore = create<CartState>()(
   persist(
@@ -66,138 +101,217 @@ export const useCartStore = create<CartState>()(
       isLoading: false,
       isOpen: false,
       error: null,
+      serverCartId: null,
 
+      // Initialize cart - get or create server cart
+      initCart: async () => {
+        try {
+          set({ isLoading: true, error: null });
+
+          // Check for existing cart ID
+          let cartId = getCartId();
+
+          if (cartId) {
+            try {
+              // Try to get existing cart
+              const serverCart = await omni.getCart(cartId);
+              set({
+                cart: serverCartToDisplay(serverCart),
+                serverCartId: cartId,
+                isLoading: false,
+              });
+              return;
+            } catch {
+              // Cart not found, clear and create new
+              clearCartId();
+              cartId = null;
+            }
+          }
+
+          // No cart yet - will create on first add
+          set({ isLoading: false });
+        } catch (err) {
+          console.error('Init cart error:', err);
+          set({ isLoading: false, error: null });
+        }
+      },
+
+      // Add item to cart (creates server cart if needed)
       addToCart: async (productId: string, variantId?: string, quantity: number = 1) => {
         console.log('addToCart called:', { productId, variantId, quantity });
         set({ isLoading: true, error: null });
 
         try {
-          // Fetch product details from API
-          const product = await omni.getProduct(productId);
-          console.log('Product fetched:', product);
+          let cartId = get().serverCartId || getCartId();
 
-          const currentCart = get().cart;
-          const items = currentCart?.items || [];
-
-          // Check if item already exists
-          const existingItemIndex = items.findIndex(
-            item => item.productId === productId && item.variantId === variantId
-          );
-
-          // Get price
-          const productWithPrice = product as Product & { basePrice?: number; salePrice?: number | null };
-          let price = String(productWithPrice.salePrice ?? productWithPrice.basePrice ?? 0);
-
-          // Get variant info and price
-          let variantInfo: { id: string; name: string } | undefined;
-          if (variantId && product.variants) {
-            const variant = product.variants.find(v => v.id === variantId);
-            if (variant) {
-              const variantWithPrice = variant as { salePrice?: number | null; price?: number | null; name?: string };
-              price = String(variantWithPrice.salePrice ?? variantWithPrice.price ?? price);
-              variantInfo = {
-                id: variant.id,
-                name: variantWithPrice.name || '',
-              };
-            }
+          // Create server cart if needed
+          if (!cartId) {
+            const newCart = await omni.createCart();
+            cartId = newCart.id;
+            setCartId(cartId);
+            set({ serverCartId: cartId });
           }
 
-          let newItems: LocalCartItem[];
+          // Add to server cart
+          const updatedCart = await omni.addToCart(cartId, {
+            productId,
+            variantId,
+            quantity,
+          });
 
-          if (existingItemIndex >= 0) {
-            // Update existing item quantity
-            newItems = items.map((item, index) =>
-              index === existingItemIndex
-                ? { ...item, quantity: item.quantity + quantity }
-                : item
-            );
-          } else {
-            // Add new item
-            const newItem: LocalCartItem = {
-              id: generateId(),
-              productId,
-              variantId,
-              quantity,
-              product: {
-                id: product.id,
-                name: product.name,
-                images: product.images,
-              },
-              variant: variantInfo,
-              unitPrice: price.toString(),
-            };
-            newItems = [...items, newItem];
-          }
+          console.log('Cart updated with discounts:', {
+            subtotal: updatedCart.subtotal,
+            discountAmount: updatedCart.discountAmount,
+          });
 
-          const newCart: LocalCart = {
-            id: currentCart?.id || generateId(),
-            items: newItems,
-            subtotal: calculateSubtotal(newItems),
-            itemCount: newItems.reduce((sum, item) => sum + item.quantity, 0),
-          };
-
-          set({ cart: newCart, isLoading: false });
+          set({
+            cart: serverCartToDisplay(updatedCart),
+            isLoading: false,
+          });
 
         } catch (err) {
           console.error('Add to cart error:', err);
           set({
             error: err instanceof Error ? err.message : 'שגיאה בהוספה לעגלה',
-            isLoading: false
+            isLoading: false,
           });
         }
       },
 
-      updateQuantity: (itemId: string, quantity: number) => {
-        const currentCart = get().cart;
-        if (!currentCart) return;
+      // Update item quantity
+      updateQuantity: async (itemId: string, quantity: number) => {
+        const cartId = get().serverCartId || getCartId();
+        if (!cartId) return;
 
-        if (quantity <= 0) {
-          // Remove item if quantity is 0 or less
-          get().removeItem(itemId);
+        set({ isLoading: true, error: null });
+
+        try {
+          if (quantity <= 0) {
+            await get().removeItem(itemId);
+            return;
+          }
+
+          const updatedCart = await omni.updateCartItem(cartId, itemId, { quantity });
+          set({
+            cart: serverCartToDisplay(updatedCart),
+            isLoading: false,
+          });
+        } catch (err) {
+          console.error('Update quantity error:', err);
+          set({
+            error: err instanceof Error ? err.message : 'שגיאה בעדכון כמות',
+            isLoading: false,
+          });
+        }
+      },
+
+      // Remove item from cart
+      removeItem: async (itemId: string) => {
+        const cartId = get().serverCartId || getCartId();
+        if (!cartId) return;
+
+        set({ isLoading: true, error: null });
+
+        try {
+          const updatedCart = await omni.removeCartItem(cartId, itemId);
+
+          if (updatedCart.items.length === 0) {
+            clearCartId();
+            set({ cart: null, serverCartId: null, isLoading: false });
+          } else {
+            set({
+              cart: serverCartToDisplay(updatedCart),
+              isLoading: false,
+            });
+          }
+        } catch (err) {
+          console.error('Remove item error:', err);
+          set({
+            error: err instanceof Error ? err.message : 'שגיאה בהסרת פריט',
+            isLoading: false,
+          });
+        }
+      },
+
+      // Apply coupon code
+      applyCoupon: async (code: string) => {
+        const cartId = get().serverCartId || getCartId();
+        if (!cartId) {
+          set({ error: 'יש להוסיף פריטים לעגלה תחילה' });
           return;
         }
 
-        const newItems = currentCart.items.map(item =>
-          item.id === itemId ? { ...item, quantity } : item
-        );
+        set({ isLoading: true, error: null });
 
-        set({
-          cart: {
-            ...currentCart,
-            items: newItems,
-            subtotal: calculateSubtotal(newItems),
-            itemCount: newItems.reduce((sum, item) => sum + item.quantity, 0),
-          },
-        });
-      },
-
-      removeItem: (itemId: string) => {
-        const currentCart = get().cart;
-        if (!currentCart) return;
-
-        const newItems = currentCart.items.filter(item => item.id !== itemId);
-
-        if (newItems.length === 0) {
-          set({ cart: null });
-        } else {
+        try {
+          const updatedCart = await omni.applyCoupon(cartId, code);
           set({
-            cart: {
-              ...currentCart,
-              items: newItems,
-              subtotal: calculateSubtotal(newItems),
-              itemCount: newItems.reduce((sum, item) => sum + item.quantity, 0),
-            },
+            cart: serverCartToDisplay(updatedCart),
+            isLoading: false,
+          });
+        } catch (err) {
+          console.error('Apply coupon error:', err);
+          // Translate common Brainerce error messages to Hebrew
+          let errorMessage = 'קוד הקופון לא תקף';
+          if (err instanceof Error) {
+            if (err.message.includes('not available for this store')) {
+              errorMessage = 'קוד הקופון לא קיים או שפג תוקפו';
+            } else if (err.message.includes('expired')) {
+              errorMessage = 'תוקף הקופון פג';
+            } else if (err.message.includes('minimum')) {
+              errorMessage = 'סכום ההזמנה נמוך מהמינימום הנדרש לקופון';
+            } else {
+              errorMessage = err.message;
+            }
+          }
+          set({
+            error: errorMessage,
+            isLoading: false,
           });
         }
       },
 
-      applyCoupon: async (_code: string) => {
-        // Local cart doesn't support coupons yet
-        set({ error: 'קופונים לא נתמכים כרגע' });
+      // Remove coupon
+      removeCoupon: async () => {
+        const cartId = get().serverCartId || getCartId();
+        if (!cartId) return;
+
+        set({ isLoading: true, error: null });
+
+        try {
+          const updatedCart = await omni.removeCoupon(cartId);
+          set({
+            cart: serverCartToDisplay(updatedCart),
+            isLoading: false,
+          });
+        } catch (err) {
+          console.error('Remove coupon error:', err);
+          set({
+            error: err instanceof Error ? err.message : 'שגיאה בהסרת קופון',
+            isLoading: false,
+          });
+        }
+      },
+
+      // Sync cart with server (refresh)
+      syncCart: async () => {
+        const cartId = get().serverCartId || getCartId();
+        if (!cartId) return;
+
+        try {
+          const serverCart = await omni.getCart(cartId);
+          set({ cart: serverCartToDisplay(serverCart) });
+        } catch (err) {
+          console.error('Sync cart error:', err);
+          // Cart might be expired
+          clearCartId();
+          set({ cart: null, serverCartId: null });
+        }
       },
 
       clearCart: () => {
-        set({ cart: null });
+        clearCartId();
+        set({ cart: null, serverCartId: null });
       },
 
       toggleCart: () => {
@@ -214,7 +328,10 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: 'moshayov-cart',
-      partialize: (state) => ({ cart: state.cart }),
+      partialize: (state) => ({
+        cart: state.cart,
+        serverCartId: state.serverCartId,
+      }),
     }
   )
 );
