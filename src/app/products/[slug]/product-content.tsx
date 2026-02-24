@@ -65,7 +65,7 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
 
-  const { addToCart, isLoading: isAddingToCart } = useCartStore();
+  const { addToCart, openCart, isLoading: isAddingToCart } = useCartStore();
 
   useEffect(() => {
     async function fetchProduct() {
@@ -97,6 +97,7 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
   const handleAddToCart = async () => {
     if (!product) return;
     await addToCart(product.id, selectedVariant?.id, quantity);
+    openCart();
   };
 
   const productWithPrice = product as { basePrice?: number; salePrice?: number | null } | null;

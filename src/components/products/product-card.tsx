@@ -36,7 +36,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
   const [imageLoaded, setImageLoaded] = useState(false);
   const [mounted, setMounted] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
-  const { addToCart, isLoading } = useCartStore();
+  const { addToCart, openCart, isLoading } = useCartStore();
   const { isFavorite, addToFavorites, removeFromFavorites } = useFavoritesStore();
   const { triggerFly } = useFlyToCart();
 
@@ -112,6 +112,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
         });
       }
       await addToCart(product.id);
+      openCart();
     }
   };
 
