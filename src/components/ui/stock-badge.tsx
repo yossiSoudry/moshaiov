@@ -24,6 +24,23 @@ export function StockBadge({
     return null;
   }
 
+  // For ALWAYS_IN_STOCK or UNLIMITED mode - always show "במלאי"
+  if (inv.trackingMode === 'ALWAYS_IN_STOCK' || inv.trackingMode === 'UNLIMITED') {
+    if (showOnlyLowStock) {
+      return null;
+    }
+    return (
+      <motion.span
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className={`inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-full border bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20 ${className}`}
+      >
+        <CheckCircle className="h-3 w-3" />
+        במלאי
+      </motion.span>
+    );
+  }
+
   // Check if low stock
   const isLowStock = inv.inStock && inv.trackingMode === 'TRACKED' && inv.available && inv.available <= lowStockThreshold;
 

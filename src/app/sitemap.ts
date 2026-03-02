@@ -18,7 +18,7 @@ const categories = ['rings', 'necklaces', 'earrings', 'bracelets', 'pendants', '
 async function getProducts() {
   try {
     const response = await fetch(
-      `https://api.brainerce.com/api/vc/vc_Qyklbs620yrtzhmgqoYUK/products?limit=500`,
+      `https://api.brainerce.com/api/vc/vc_LtawnwQr1w5F5Tqi1wYOG/products?limit=500`,
       {
         next: { revalidate: 3600 }, // Cache for 1 hour
       }

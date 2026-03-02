@@ -132,14 +132,16 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
   };
 
   const getStockDisplay = () => {
-    const inv = product.inventory as { trackingMode?: string; available?: number; total?: number; inStock?: boolean } | undefined;
+    const inv = product.inventory as { trackingMode?: string; available?: number; total?: number; inStock?: boolean; canPurchase?: boolean } | undefined;
     if (!inv || inv.trackingMode === 'DISABLED') {
       return null;
     }
-    if (inv.trackingMode === 'UNLIMITED') {
-      return { text: 'במלאי', lowStock: false };
+    // ALWAYS_IN_STOCK or UNLIMITED - always available, no badge needed
+    if (inv.trackingMode === 'ALWAYS_IN_STOCK' || inv.trackingMode === 'UNLIMITED') {
+      return null; // Don't show badge for always-in-stock items
     }
-    if (inv.inStock === false) {
+    // TRACKED mode
+    if (inv.inStock === false || inv.canPurchase === false) {
       return { text: 'אזל מהמלאי', lowStock: false, outOfStock: true };
     }
     const qty = inv.available ?? inv.total ?? 0;

@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { omni, getCartId, setCartId, clearCartId } from '@/lib/omni-sync';
+import { getClient, initClient, getCartId, setCartId, clearCartId, isLoggedIn } from '@/lib/omni-sync';
 import type { Cart } from 'brainerce';
 
 // Unified cart item structure (works with both server and local cart)
@@ -103,57 +103,44 @@ export const useCartStore = create<CartState>()(
       error: null,
       serverCartId: null,
 
-      // Initialize cart - get or create server cart
+      // Initialize cart using smartGetCart - handles both logged-in and guest users
       initCart: async () => {
         try {
           set({ isLoading: true, error: null });
 
-          // Check for existing cart ID
-          let cartId = getCartId();
+          // Initialize client with stored token
+          const client = initClient();
 
-          if (cartId) {
-            try {
-              // Try to get existing cart
-              const serverCart = await omni.getCart(cartId);
-              set({
-                cart: serverCartToDisplay(serverCart),
-                serverCartId: cartId,
-                isLoading: false,
-              });
-              return;
-            } catch {
-              // Cart not found, clear and create new
-              clearCartId();
-              cartId = null;
-            }
+          // Use smartGetCart - it handles everything automatically
+          const serverCart = await client.smartGetCart();
+
+          if (serverCart && serverCart.id) {
+            // Persist server cart ID
+            setCartId(serverCart.id);
+            set({
+              cart: serverCartToDisplay(serverCart),
+              serverCartId: serverCart.id,
+              isLoading: false,
+            });
+          } else {
+            set({ isLoading: false });
           }
-
-          // No cart yet - will create on first add
-          set({ isLoading: false });
         } catch (err) {
           console.error('Init cart error:', err);
           set({ isLoading: false, error: null });
         }
       },
 
-      // Add item to cart (creates server cart if needed)
+      // Add item to cart
       addToCart: async (productId: string, variantId?: string, quantity: number = 1) => {
         console.log('addToCart called:', { productId, variantId, quantity });
         set({ isLoading: true, error: null });
 
         try {
-          let cartId = get().serverCartId || getCartId();
+          const client = getClient();
 
-          // Create server cart if needed
-          if (!cartId) {
-            const newCart = await omni.createCart();
-            cartId = newCart.id;
-            setCartId(cartId);
-            set({ serverCartId: cartId });
-          }
-
-          // Add to server cart
-          const updatedCart = await omni.addToCart(cartId, {
+          // Add to cart - SDK handles cart creation automatically
+          const updatedCart = await client.addToCart({
             productId,
             variantId,
             quantity,
@@ -164,8 +151,12 @@ export const useCartStore = create<CartState>()(
             discountAmount: updatedCart.discountAmount,
           });
 
+          // Persist cart ID
+          setCartId(updatedCart.id);
+
           set({
             cart: serverCartToDisplay(updatedCart),
+            serverCartId: updatedCart.id,
             isLoading: false,
           });
 
@@ -191,7 +182,8 @@ export const useCartStore = create<CartState>()(
             return;
           }
 
-          const updatedCart = await omni.updateCartItem(cartId, itemId, { quantity });
+          const client = getClient();
+          const updatedCart = await client.updateCartItem(cartId, itemId, { quantity });
           set({
             cart: serverCartToDisplay(updatedCart),
             isLoading: false,
@@ -213,7 +205,8 @@ export const useCartStore = create<CartState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const updatedCart = await omni.removeCartItem(cartId, itemId);
+          const client = getClient();
+          const updatedCart = await client.removeCartItem(cartId, itemId);
 
           if (updatedCart.items.length === 0) {
             clearCartId();
@@ -244,7 +237,8 @@ export const useCartStore = create<CartState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const updatedCart = await omni.applyCoupon(cartId, code);
+          const client = getClient();
+          const updatedCart = await client.applyCoupon(cartId, code);
           set({
             cart: serverCartToDisplay(updatedCart),
             isLoading: false,
@@ -279,7 +273,8 @@ export const useCartStore = create<CartState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const updatedCart = await omni.removeCoupon(cartId);
+          const client = getClient();
+          const updatedCart = await client.removeCoupon(cartId);
           set({
             cart: serverCartToDisplay(updatedCart),
             isLoading: false,
@@ -299,7 +294,8 @@ export const useCartStore = create<CartState>()(
         if (!cartId) return;
 
         try {
-          const serverCart = await omni.getCart(cartId);
+          const client = getClient();
+          const serverCart = await client.getCart(cartId);
           set({ cart: serverCartToDisplay(serverCart) });
         } catch (err) {
           console.error('Sync cart error:', err);

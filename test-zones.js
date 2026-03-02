@@ -2,7 +2,7 @@ const { BrainerceClient } = require('brainerce');
 
 async function testZones() {
   const omni = new BrainerceClient({
-    connectionId: 'vc_Qyklbs620yrtzhmgqoYUK',
+    connectionId: 'vc_LtawnwQr1w5F5Tqi1wYOG',
   });
 
   try {

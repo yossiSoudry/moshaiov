@@ -30,10 +30,100 @@ import {
   type Coupon,
 } from 'brainerce';
 
-// Initialize client
-export const omni = new BrainerceClient({
-  connectionId: 'vc_Qyklbs620yrtzhmgqoYUK',
-});
+const CONNECTION_ID = process.env.NEXT_PUBLIC_BRAINERCE_CONNECTION_ID || 'vc_LtawnwQr1w5F5Tqi1wYOG';
+const API_URL = process.env.NEXT_PUBLIC_BRAINERCE_API_URL || 'https://api.brainerce.com';
+
+// Singleton SDK client
+let clientInstance: BrainerceClient | null = null;
+
+export function getClient(): BrainerceClient {
+  if (!clientInstance) {
+    clientInstance = new BrainerceClient({
+      connectionId: CONNECTION_ID,
+      baseUrl: API_URL,
+    });
+  }
+  return clientInstance;
+}
+
+// Auth token helpers
+const TOKEN_KEY = 'brainerce_customer_token';
+const CART_ID_KEY = 'cartId';
+
+export function getStoredToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setStoredToken(token: string | null): void {
+  if (typeof window === 'undefined') return;
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(TOKEN_KEY);
+  }
+}
+
+export function getCartId(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(CART_ID_KEY);
+}
+
+export function setCartId(cartId: string | null): void {
+  if (typeof window === 'undefined') return;
+  if (cartId) {
+    localStorage.setItem(CART_ID_KEY, cartId);
+  } else {
+    localStorage.removeItem(CART_ID_KEY);
+  }
+}
+
+export function clearCartId(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(CART_ID_KEY);
+}
+
+// Initialize client with stored auth
+export function initClient(): BrainerceClient {
+  const client = getClient();
+  const token = getStoredToken();
+  if (token) {
+    client.setCustomerToken(token);
+  }
+  return client;
+}
+
+// Customer token helpers - persist auth across page loads
+export function setCustomerToken(token: string | null): void {
+  if (token) {
+    setStoredToken(token);
+    getClient().setCustomerToken(token);
+  } else {
+    setStoredToken(null);
+    getClient().clearCustomerToken();
+  }
+}
+
+export function restoreCustomerToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  const token = getStoredToken();
+  if (token) getClient().setCustomerToken(token);
+  return token;
+}
+
+export function isLoggedIn(): boolean {
+  if (typeof window === 'undefined') return false;
+  return !!getStoredToken();
+}
+
+export function logout(): void {
+  setStoredToken(null);
+  getClient().clearCustomerToken();
+  getClient().onLogout();
+}
+
+// Legacy export for backward compatibility
+export const omni = getClient();
 
 // Re-export all helper functions for easy access
 export {
@@ -68,48 +158,6 @@ export type {
   InventoryInfo,
   Coupon,
 };
-
-// Cart helpers - save cart ID to localStorage
-export function getCartId(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('cartId');
-}
-
-export function setCartId(id: string): void {
-  localStorage.setItem('cartId', id);
-}
-
-export function clearCartId(): void {
-  localStorage.removeItem('cartId');
-}
-
-// Customer token helpers - persist auth across page loads
-export function setCustomerToken(token: string | null): void {
-  if (token) {
-    localStorage.setItem('customerToken', token);
-    omni.setCustomerToken(token);
-  } else {
-    localStorage.removeItem('customerToken');
-    omni.clearCustomerToken();
-  }
-}
-
-export function restoreCustomerToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  const token = localStorage.getItem('customerToken');
-  if (token) omni.setCustomerToken(token);
-  return token;
-}
-
-export function isLoggedIn(): boolean {
-  if (typeof window === 'undefined') return false;
-  return !!localStorage.getItem('customerToken');
-}
-
-export function logout(): void {
-  localStorage.removeItem('customerToken');
-  omni.clearCustomerToken();
-}
 
 // ============================================
 // Price & Formatting Utilities
@@ -242,7 +290,7 @@ export function getCartItem(cart: Cart | null, productId: string, variantId?: st
  */
 export async function applyCoupon(cartId: string, code: string): Promise<{ success: boolean; error?: string; cart?: Cart }> {
   try {
-    const cart = await omni.applyCoupon(cartId, code);
+    const cart = await getClient().applyCoupon(cartId, code);
     return { success: true, cart };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'קוד הקופון לא תקף';
@@ -255,7 +303,7 @@ export async function applyCoupon(cartId: string, code: string): Promise<{ succe
  */
 export async function removeCoupon(cartId: string): Promise<{ success: boolean; error?: string; cart?: Cart }> {
   try {
-    const cart = await omni.removeCoupon(cartId);
+    const cart = await getClient().removeCoupon(cartId);
     return { success: true, cart };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'שגיאה בהסרת הקופון';
