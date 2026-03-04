@@ -4,8 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { CartProvider } from "@/components/providers/cart-provider";
-import { AuthProvider } from "@/components/providers/auth-provider";
+import { StoreProvider } from "@/providers/store-provider";
 import { FlyToCartProvider } from "@/components/ui/fly-to-cart";
 import { CookieConsent } from "@/components/ui/cookie-consent";
 
@@ -196,16 +195,14 @@ export default function RootLayout({
         className={`${heebo.variable} font-sans antialiased min-h-screen flex flex-col`}
         suppressHydrationWarning
       >
-        <AuthProvider>
-          <CartProvider>
-            <FlyToCartProvider>
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-              <CookieConsent />
-            </FlyToCartProvider>
-          </CartProvider>
-        </AuthProvider>
+        <StoreProvider>
+          <FlyToCartProvider>
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <CookieConsent />
+          </FlyToCartProvider>
+        </StoreProvider>
 
         {/* UserWay Accessibility Widget */}
         <Script

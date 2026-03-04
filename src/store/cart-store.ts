@@ -114,11 +114,11 @@ export const useCartStore = create<CartState>()(
           // Use smartGetCart - it handles everything automatically
           const serverCart = await client.smartGetCart();
 
-          if (serverCart && serverCart.id) {
+          if (serverCart && 'id' in serverCart && serverCart.id) {
             // Persist server cart ID
             setCartId(serverCart.id);
             set({
-              cart: serverCartToDisplay(serverCart),
+              cart: serverCartToDisplay(serverCart as Cart),
               serverCartId: serverCart.id,
               isLoading: false,
             });
@@ -139,26 +139,32 @@ export const useCartStore = create<CartState>()(
         try {
           const client = getClient();
 
-          // Add to cart - SDK handles cart creation automatically
-          const updatedCart = await client.addToCart({
+          // Use smartAddToCart - handles both guest and logged-in users automatically
+          const updatedCart = await client.smartAddToCart({
             productId,
             variantId,
             quantity,
           });
 
-          console.log('Cart updated with discounts:', {
-            subtotal: updatedCart.subtotal,
-            discountAmount: updatedCart.discountAmount,
-          });
+          // Only process server carts with ID
+          if (updatedCart && 'id' in updatedCart && updatedCart.id) {
+            const cart = updatedCart as Cart;
+            console.log('Cart updated with discounts:', {
+              subtotal: cart.subtotal,
+              discountAmount: cart.discountAmount,
+            });
 
-          // Persist cart ID
-          setCartId(updatedCart.id);
+            // Persist cart ID
+            setCartId(cart.id);
 
-          set({
-            cart: serverCartToDisplay(updatedCart),
-            serverCartId: updatedCart.id,
-            isLoading: false,
-          });
+            set({
+              cart: serverCartToDisplay(cart),
+              serverCartId: cart.id,
+              isLoading: false,
+            });
+          } else {
+            set({ isLoading: false });
+          }
 
         } catch (err) {
           console.error('Add to cart error:', err);

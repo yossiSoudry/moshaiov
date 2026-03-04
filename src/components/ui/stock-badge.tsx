@@ -18,14 +18,15 @@ export function StockBadge({
   className = '',
 }: StockBadgeProps) {
   const inv = product.inventory;
+  const trackingMode = inv?.trackingMode as string | undefined;
 
   // Don't show anything for disabled inventory or no inventory
-  if (!inv || inv.trackingMode === 'DISABLED') {
+  if (!inv || trackingMode === 'DISABLED') {
     return null;
   }
 
   // For ALWAYS_IN_STOCK or UNLIMITED mode - always show "במלאי"
-  if (inv.trackingMode === 'ALWAYS_IN_STOCK' || inv.trackingMode === 'UNLIMITED') {
+  if (trackingMode === 'ALWAYS_IN_STOCK' || trackingMode === 'UNLIMITED') {
     if (showOnlyLowStock) {
       return null;
     }
@@ -42,7 +43,7 @@ export function StockBadge({
   }
 
   // Check if low stock
-  const isLowStock = inv.inStock && inv.trackingMode === 'TRACKED' && inv.available && inv.available <= lowStockThreshold;
+  const isLowStock = inv.inStock && trackingMode === 'TRACKED' && inv.available && inv.available <= lowStockThreshold;
 
   // If showOnlyLowStock is true, only render for low stock items
   if (showOnlyLowStock && !isLowStock) {
@@ -60,7 +61,7 @@ export function StockBadge({
     }
 
     // For TRACKED mode with low quantity
-    if (inv.trackingMode === 'TRACKED' && inv.available && inv.available <= lowStockThreshold) {
+    if (trackingMode === 'TRACKED' && inv.available && inv.available <= lowStockThreshold) {
       return {
         text: `נותרו ${inv.available} בלבד!`,
         variant: 'low-stock' as const,

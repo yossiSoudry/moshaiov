@@ -1,16 +1,55 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { X, Plus, Minus, Trash2, ShoppingBag, Diamond, Sparkles, ArrowLeft, Tag, Percent } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
+import { useCart } from '@/providers/store-provider';
+import { getClient } from '@/lib/omni-sync';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/utils';
 
 export function CartDrawer() {
-  const { cart, isOpen, isLoading, toggleCart, updateQuantity, removeItem } = useCartStore();
+  const { cart, refreshCart } = useCart();
+  const { isOpen, toggleCart } = useCartStore();
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Update quantity handler using smartUpdateCartItem
+  async function updateQuantity(itemId: string, quantity: number) {
+    if (quantity < 1) return;
+    const item = cart?.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    try {
+      setIsLoading(true);
+      const client = getClient();
+      await client.smartUpdateCartItem(item.product.id, quantity, item.variant?.id);
+      await refreshCart();
+    } catch (err) {
+      console.error('Failed to update quantity:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // Remove item handler using smartRemoveFromCart
+  async function removeItem(itemId: string) {
+    const item = cart?.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    try {
+      setIsLoading(true);
+      const client = getClient();
+      await client.smartRemoveFromCart(item.product.id, item.variant?.id);
+      await refreshCart();
+    } catch (err) {
+      console.error('Failed to remove item:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
     console.log('CartDrawer: isOpen changed to:', isOpen);

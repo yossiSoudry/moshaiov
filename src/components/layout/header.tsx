@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { SearchIcon } from '@/components/ui/search';
 import { CartIcon } from '@/components/ui/cart';
 import { useCartStore } from '@/store/cart-store';
+import { useCart } from '@/providers/store-provider';
 import { useAuthStore } from '@/store/auth-store';
 import { useFlyToCart } from '@/components/ui/fly-to-cart';
 import { SearchDropdown } from './search-dropdown';
@@ -42,7 +43,8 @@ export function Header() {
   const inputRef = useRef<HTMLInputElement>(null);
   const cartIconRef = useRef<HTMLDivElement>(null);
 
-  const { cart, toggleCart } = useCartStore();
+  const { cart } = useCart();
+  const { toggleCart } = useCartStore();
   const { isAuthenticated } = useAuthStore();
   const { setCartIconRef } = useFlyToCart();
   const pathname = usePathname();

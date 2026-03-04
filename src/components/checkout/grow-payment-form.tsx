@@ -6,24 +6,7 @@ import { omni } from '@/lib/omni-sync';
 import { Loader2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-declare global {
-  interface Window {
-    growPayment?: {
-      init: (config: {
-        environment: string;
-        version: number;
-        events: {
-          onSuccess?: (response: unknown) => void;
-          onFailure?: (response: unknown) => void;
-          onError?: (response: unknown) => void;
-          onTimeout?: (response: unknown) => void;
-          onWalletChange?: (state: string) => void;
-        };
-      }) => void;
-      renderPaymentOptions: (authCode: string) => void;
-    };
-  }
-}
+// Window.growPayment type is declared in payment-step.tsx
 
 const GROW_SDK_URL = 'https://cdn.meshulam.co.il/sdk/gs.min.js';
 

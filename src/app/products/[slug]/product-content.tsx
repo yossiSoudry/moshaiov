@@ -13,8 +13,9 @@ import {
   Plus,
 } from 'lucide-react';
 import { Truck, Shield, RotateCcw } from 'lucide-react';
-import { omni } from '@/lib/omni-sync';
+import { omni, getClient } from '@/lib/omni-sync';
 import { cn, formatPrice } from '@/lib/utils';
+import { useCart } from '@/providers/store-provider';
 import { useCartStore } from '@/store/cart-store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -65,7 +66,9 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
 
-  const { addToCart, openCart, isLoading: isAddingToCart } = useCartStore();
+  const { refreshCart } = useCart();
+  const { openCart } = useCartStore();
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -95,9 +98,39 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
   }, [slug, initialProduct]);
 
   const handleAddToCart = async () => {
-    if (!product) return;
-    await addToCart(product.id, selectedVariant?.id, quantity);
-    openCart();
+    if (!product || isAddingToCart) return;
+    try {
+      setIsAddingToCart(true);
+      setError(null);
+      const client = getClient();
+
+      console.log('Adding to cart:', {
+        productId: product.id,
+        variantId: selectedVariant?.id,
+        quantity,
+        name: product.name,
+        price: String(currentPrice),
+      });
+
+      const result = await client.smartAddToCart({
+        productId: product.id,
+        variantId: selectedVariant?.id,
+        quantity,
+        name: product.name,
+        price: String(currentPrice),
+        image: displayImage || undefined,
+      });
+
+      console.log('Add to cart result:', result);
+
+      await refreshCart();
+      openCart();
+    } catch (err) {
+      console.error('Failed to add to cart:', err);
+      setError(err instanceof Error ? err.message : 'שגיאה בהוספה לסל');
+    } finally {
+      setIsAddingToCart(false);
+    }
   };
 
   const productWithPrice = product as { basePrice?: number; salePrice?: number | null } | null;
@@ -427,7 +460,7 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 mb-8">
+              <div className="flex gap-3 mb-4">
                 <Button
                   size="lg"
                   className="flex-1"
@@ -452,6 +485,13 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
                   <Share2 className="h-5 w-5" />
                 </Button>
               </div>
+
+              {/* Cart error message */}
+              {error && !isLoading && (
+                <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+                  {error}
+                </div>
+              )}
 
               <Separator className="mb-6" />
 

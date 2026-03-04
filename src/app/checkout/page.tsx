@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Checkout, ShippingRate, SetShippingAddressDto } from 'brainerce';
 import { getClient, isLoggedIn, clearCartId } from '@/lib/omni-sync';
-import { useCartStore } from '@/store/cart-store';
+import { useCart, useAuth } from '@/providers/store-provider';
 import { formatPrice, cn } from '@/lib/utils';
 import { CheckoutForm } from '@/components/checkout/checkout-form';
 import { ShippingStep } from '@/components/checkout/shipping-step';
@@ -34,7 +34,8 @@ interface PickupLocation {
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
-  const { cart } = useCartStore();
+  const { cart, refreshCart } = useCart();
+  const { isLoggedIn: isUserLoggedIn } = useAuth();
 
   const [checkout, setCheckout] = useState<Checkout | null>(null);
   const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
@@ -83,7 +84,7 @@ function CheckoutContent() {
 
       // Create new checkout — cart is always server-side now
       if (cart && cart.id) {
-        if (isLoggedIn()) {
+        if (isUserLoggedIn) {
           // Logged-in user: create checkout from customer cart
           console.log('🛒 Creating checkout for logged-in user from cart:', cart.id);
           const newCheckout = await client.createCheckout({ cartId: cart.id });
@@ -108,14 +109,14 @@ function CheckoutContent() {
       // Check for specific errors
       if (message.toLowerCase().includes('products not found') || message.toLowerCase().includes('product not found')) {
         clearCartId();
-        useCartStore.getState().clearCart();
+        refreshCart();
         setError('חלק מהמוצרים בעגלה אינם זמינים יותר. העגלה נוקתה.');
         return;
       }
 
       if (message.toLowerCase().includes('cart is empty') || message.toLowerCase().includes('cart not found')) {
         clearCartId();
-        useCartStore.getState().clearCart();
+        refreshCart();
         setError('העגלה ריקה או פגה תוקף.');
         return;
       }
@@ -124,7 +125,7 @@ function CheckoutContent() {
     } finally {
       setInitializing(false);
     }
-  }, [existingCheckoutId, cart]);
+  }, [existingCheckoutId, cart, isUserLoggedIn, refreshCart]);
 
   const cartLoaded = cart !== null;
   useEffect(() => {

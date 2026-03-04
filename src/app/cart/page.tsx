@@ -17,7 +17,8 @@ import {
   X,
   Percent,
 } from 'lucide-react';
-import { useCartStore } from '@/store/cart-store';
+import { useCart } from '@/providers/store-provider';
+import { getClient } from '@/lib/omni-sync';
 import { formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,32 +26,57 @@ import { Separator } from '@/components/ui/separator';
 
 export default function CartPage() {
   const router = useRouter();
-  const {
-    cart,
-    isLoading,
-    updateQuantity,
-    removeItem,
-    applyCoupon,
-    removeCoupon,
-    initCart,
-    error,
-  } = useCartStore();
+  const { cart, cartLoading, refreshCart } = useCart();
 
   const [couponCode, setCouponCode] = useState('');
   const [couponError, setCouponError] = useState('');
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const items = cart?.items || [];
   const subtotal = cart?.subtotal ? parseFloat(cart.subtotal) : 0;
   const discountAmount = cart?.discountAmount ? parseFloat(cart.discountAmount) : 0;
   const appliedCoupon = cart?.couponCode || null;
 
-  // Initialize cart on mount
-  useEffect(() => {
-    initCart();
-  }, [initCart]);
+  // Update quantity handler
+  async function updateQuantity(itemId: string, quantity: number) {
+    if (quantity < 1) return;
+    try {
+      setIsLoading(true);
+      setError(null);
+      const client = getClient();
+      const item = items.find(i => i.id === itemId);
+      if (item) {
+        await client.smartUpdateCartItem(item.productId, quantity, item.variantId || undefined);
+        await refreshCart();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'שגיאה בעדכון כמות');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // Remove item handler
+  async function removeItem(itemId: string) {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const client = getClient();
+      const item = items.find(i => i.id === itemId);
+      if (item) {
+        await client.smartRemoveFromCart(item.productId, item.variantId || undefined);
+        await refreshCart();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'שגיאה בהסרת פריט');
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   // Initialize selected indices when items change
   useEffect(() => {
@@ -93,14 +119,16 @@ export default function CartPage() {
   // Apply coupon
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!couponCode.trim()) return;
+    if (!couponCode.trim() || !cart) return;
 
     setIsApplyingCoupon(true);
     setCouponError('');
 
     try {
-      await applyCoupon(couponCode.trim());
+      const client = getClient();
+      await client.applyCoupon(cart.id, couponCode.trim());
       setCouponCode('');
+      await refreshCart();
     } catch (err) {
       setCouponError(err instanceof Error ? err.message : 'קוד קופון לא תקין');
     } finally {
@@ -110,8 +138,11 @@ export default function CartPage() {
 
   // Remove coupon
   const handleRemoveCoupon = async () => {
+    if (!cart) return;
     try {
-      await removeCoupon();
+      const client = getClient();
+      await client.removeCoupon(cart.id);
+      await refreshCart();
     } catch (err) {
       console.error('Failed to remove coupon:', err);
     }
@@ -235,7 +266,7 @@ export default function CartPage() {
 
                     {/* Image */}
                     <Link
-                      href={`/products/${item.product?.slug || item.productId}`}
+                      href={`/products/${(item.product as { slug?: string })?.slug || item.productId}`}
                       className="relative w-24 h-24 sm:w-32 sm:h-32 bg-muted rounded-lg overflow-hidden flex-shrink-0"
                     >
                       {item.product?.images?.[0]?.url ? (
@@ -263,7 +294,7 @@ export default function CartPage() {
                     {/* Details */}
                     <div className="flex-1 min-w-0">
                       <Link
-                        href={`/products/${item.product?.slug || item.productId}`}
+                        href={`/products/${(item.product as { slug?: string })?.slug || item.productId}`}
                         className="font-medium hover:text-primary transition-colors line-clamp-2"
                       >
                         {item.product?.name || 'מוצר'}
