@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getClient, initClient, getCartId, setCartId, clearCartId, isLoggedIn } from '@/lib/omni-sync';
+import { logError, getErrorMessage } from '@/lib/utils';
 import type { Cart } from 'brainerce';
 
 // Unified cart item structure (works with both server and local cart)
@@ -126,7 +127,7 @@ export const useCartStore = create<CartState>()(
             set({ isLoading: false });
           }
         } catch (err) {
-          console.error('Init cart error:', err);
+          logError('Init cart error:', err);
           set({ isLoading: false, error: null });
         }
       },
@@ -167,9 +168,9 @@ export const useCartStore = create<CartState>()(
           }
 
         } catch (err) {
-          console.error('Add to cart error:', err);
+          logError('Add to cart error:', err);
           set({
-            error: err instanceof Error ? err.message : 'שגיאה בהוספה לעגלה',
+            error: getErrorMessage(err) || 'שגיאה בהוספה לעגלה',
             isLoading: false,
           });
         }
@@ -195,9 +196,9 @@ export const useCartStore = create<CartState>()(
             isLoading: false,
           });
         } catch (err) {
-          console.error('Update quantity error:', err);
+          logError('Update quantity error:', err);
           set({
-            error: err instanceof Error ? err.message : 'שגיאה בעדכון כמות',
+            error: getErrorMessage(err) || 'שגיאה בעדכון כמות',
             isLoading: false,
           });
         }
@@ -224,9 +225,9 @@ export const useCartStore = create<CartState>()(
             });
           }
         } catch (err) {
-          console.error('Remove item error:', err);
+          logError('Remove item error:', err);
           set({
-            error: err instanceof Error ? err.message : 'שגיאה בהסרת פריט',
+            error: getErrorMessage(err) || 'שגיאה בהסרת פריט',
             isLoading: false,
           });
         }
@@ -250,19 +251,18 @@ export const useCartStore = create<CartState>()(
             isLoading: false,
           });
         } catch (err) {
-          console.error('Apply coupon error:', err);
+          logError('Apply coupon error:', err);
           // Translate common Brainerce error messages to Hebrew
           let errorMessage = 'קוד הקופון לא תקף';
-          if (err instanceof Error) {
-            if (err.message.includes('not available for this store')) {
-              errorMessage = 'קוד הקופון לא קיים או שפג תוקפו';
-            } else if (err.message.includes('expired')) {
-              errorMessage = 'תוקף הקופון פג';
-            } else if (err.message.includes('minimum')) {
-              errorMessage = 'סכום ההזמנה נמוך מהמינימום הנדרש לקופון';
-            } else {
-              errorMessage = err.message;
-            }
+          const errMsg = getErrorMessage(err);
+          if (errMsg.includes('not available for this store')) {
+            errorMessage = 'קוד הקופון לא קיים או שפג תוקפו';
+          } else if (errMsg.includes('expired')) {
+            errorMessage = 'תוקף הקופון פג';
+          } else if (errMsg.includes('minimum')) {
+            errorMessage = 'סכום ההזמנה נמוך מהמינימום הנדרש לקופון';
+          } else if (errMsg && errMsg !== '[object XMLHttpRequest]' && errMsg !== '[object Object]') {
+            errorMessage = errMsg;
           }
           set({
             error: errorMessage,
@@ -286,9 +286,9 @@ export const useCartStore = create<CartState>()(
             isLoading: false,
           });
         } catch (err) {
-          console.error('Remove coupon error:', err);
+          logError('Remove coupon error:', err);
           set({
-            error: err instanceof Error ? err.message : 'שגיאה בהסרת קופון',
+            error: getErrorMessage(err) || 'שגיאה בהסרת קופון',
             isLoading: false,
           });
         }
@@ -304,7 +304,7 @@ export const useCartStore = create<CartState>()(
           const serverCart = await client.getCart(cartId);
           set({ cart: serverCartToDisplay(serverCart) });
         } catch (err) {
-          console.error('Sync cart error:', err);
+          logError('Sync cart error:', err);
           // Cart might be expired
           clearCartId();
           set({ cart: null, serverCartId: null });

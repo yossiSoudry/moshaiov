@@ -54,7 +54,7 @@ export function FeaturedProducts() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-8">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 lg:gap-8">
         {[...Array(8)].map((_, i) => (
           <ProductSkeleton key={i} index={i} />
         ))}
@@ -105,7 +105,7 @@ export function FeaturedProducts() {
     <div className="space-y-12">
       {/* Products grid */}
       <motion.div
-        className="grid grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-8"
+        className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 lg:gap-8"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}

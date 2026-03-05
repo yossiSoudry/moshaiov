@@ -6,8 +6,7 @@ import type { CartItem as CartItemType } from 'brainerce';
 import { getCartItemName, getCartItemImage } from 'brainerce';
 import { getClient } from '@/lib/omni-sync';
 import { useStoreInfo } from '@/providers/store-provider';
-import { formatPrice } from '@/lib/utils';
-import { cn } from '@/lib/utils';
+import { formatPrice, cn, logError } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
 interface CartItemProps {
@@ -36,7 +35,7 @@ export function CartItem({ item, onUpdate, className }: CartItemProps) {
       await client.smartUpdateCartItem(item.productId, newQuantity, item.variantId || undefined);
       onUpdate();
     } catch (err) {
-      console.error('Failed to update quantity:', err);
+      logError('Failed to update quantity:', err);
     } finally {
       setUpdating(false);
     }
@@ -51,7 +50,7 @@ export function CartItem({ item, onUpdate, className }: CartItemProps) {
       await client.smartRemoveFromCart(item.productId, item.variantId || undefined);
       onUpdate();
     } catch (err) {
-      console.error('Failed to remove item:', err);
+      logError('Failed to remove item:', err);
     } finally {
       setRemoving(false);
     }

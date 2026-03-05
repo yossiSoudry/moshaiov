@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import type { StoreInfo, Cart } from 'brainerce';
 import { getCartTotals } from 'brainerce';
 import { getClient, initClient, getStoredToken, setStoredToken, setCartId } from '@/lib/omni-sync';
+import { logError } from '@/lib/utils';
 
 // ---- Store Info Context ----
 interface StoreInfoContextValue {
@@ -83,7 +84,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     client
       .getStoreInfo()
       .then(setStoreInfo)
-      .catch(console.error)
+      .catch((err) => logError('Failed to load store info:', err))
       .finally(() => setStoreLoading(false));
   }, []);
 
@@ -102,7 +103,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setCart(null);
       }
     } catch (err) {
-      console.error('Failed to load cart:', err);
+      logError('Failed to load cart:', err);
     } finally {
       setCartLoading(false);
     }
@@ -119,7 +120,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setToken(newToken);
 
     // Merge guest session cart into customer cart
-    client.syncCartOnLogin().catch(console.error);
+    client.syncCartOnLogin().catch((err) => logError('Failed to sync cart on login:', err));
   }, []);
 
   const logout = useCallback(() => {

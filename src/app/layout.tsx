@@ -7,6 +7,7 @@ import { Footer } from "@/components/layout/footer";
 import { StoreProvider } from "@/providers/store-provider";
 import { FlyToCartProvider } from "@/components/ui/fly-to-cart";
 import { CookieConsent } from "@/components/ui/cookie-consent";
+import { GlobalErrorHandler } from "@/components/providers/error-boundary";
 
 const heebo = Heebo({
   variable: "--font-heebo",
@@ -195,14 +196,16 @@ export default function RootLayout({
         className={`${heebo.variable} font-sans antialiased min-h-screen flex flex-col`}
         suppressHydrationWarning
       >
-        <StoreProvider>
-          <FlyToCartProvider>
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
-            <CookieConsent />
-          </FlyToCartProvider>
-        </StoreProvider>
+        <GlobalErrorHandler>
+          <StoreProvider>
+            <FlyToCartProvider>
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+              <CookieConsent />
+            </FlyToCartProvider>
+          </StoreProvider>
+        </GlobalErrorHandler>
 
         {/* UserWay Accessibility Widget */}
         <Script

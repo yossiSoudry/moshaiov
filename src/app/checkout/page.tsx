@@ -7,7 +7,7 @@ import Link from 'next/link';
 import type { Checkout, ShippingRate, SetShippingAddressDto } from 'brainerce';
 import { getClient, isLoggedIn, clearCartId } from '@/lib/omni-sync';
 import { useCart, useAuth } from '@/providers/store-provider';
-import { formatPrice, cn } from '@/lib/utils';
+import { formatPrice, cn, logError, getErrorMessage } from '@/lib/utils';
 import { CheckoutForm } from '@/components/checkout/checkout-form';
 import { ShippingStep } from '@/components/checkout/shipping-step';
 import { PaymentStep } from '@/components/checkout/payment-step';
@@ -104,7 +104,7 @@ function CheckoutContent() {
         setError('העגלה ריקה.');
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'שגיאה בטעינת התשלום';
+      const message = getErrorMessage(err) || 'שגיאה בטעינת התשלום';
 
       // Check for specific errors
       if (message.toLowerCase().includes('products not found') || message.toLowerCase().includes('product not found')) {
@@ -130,7 +130,7 @@ function CheckoutContent() {
   const cartLoaded = cart !== null;
   useEffect(() => {
     if (cartLoaded) {
-      initCheckout();
+      initCheckout().catch((err) => logError('Checkout initialization error:', err));
     }
   }, [cartLoaded, initCheckout]);
 
@@ -148,7 +148,7 @@ function CheckoutContent() {
       setShippingRates(response.rates);
       setAddressSaved(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'שגיאה בשמירת הכתובת';
+      const message = getErrorMessage(err) || 'שגיאה בשמירת הכתובת';
       setError(message);
     } finally {
       setLoading(false);
@@ -169,7 +169,7 @@ function CheckoutContent() {
       setCheckout(updated);
       setShippingSelected(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'שגיאה בבחירת משלוח';
+      const message = getErrorMessage(err) || 'שגיאה בבחירת משלוח';
       setError(message);
     } finally {
       setLoading(false);
@@ -206,7 +206,7 @@ function CheckoutContent() {
           ]);
         }
       } catch (err) {
-        console.error('Error fetching pickup locations:', err);
+        logError('Error fetching pickup locations:', err);
         // Fallback to manual locations
         setPickupLocations([
           {
@@ -267,7 +267,7 @@ function CheckoutContent() {
       }
       setPickupSelected(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'שגיאה בבחירת נקודת איסוף';
+      const message = getErrorMessage(err) || 'שגיאה בבחירת נקודת איסוף';
       setError(message);
     } finally {
       setLoading(false);

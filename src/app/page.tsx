@@ -8,7 +8,7 @@ import { Diamond, Sparkles } from 'lucide-react';
 
 function ProductsSkeleton() {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-8">
+    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 lg:gap-8">
       {[...Array(8)].map((_, i) => (
         <div key={i} className="space-y-4">
           <div className="aspect-square rounded-2xl bg-muted animate-shimmer" />

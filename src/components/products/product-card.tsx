@@ -374,10 +374,10 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
                   onClick={handleAddToCart}
                   disabled={isLoading}
                   aria-label={`הוסף ${product.name} לעגלה`}
-                  className="rounded-full p-2 sm:px-5 sm:py-2 text-sm font-medium bg-black hover:bg-black/80 text-gold-400 shadow-lg border border-gold-500/30"
+                  className="rounded-full p-2 sm:px-5 sm:py-2 lg:p-2 text-sm font-medium bg-black hover:bg-black/80 text-gold-400 shadow-lg border border-gold-500/30"
                 >
-                  <ShoppingBag className="h-4 w-4 sm:me-1.5" />
-                  <span className="hidden sm:inline">הוסף</span>
+                  <ShoppingBag className="h-4 w-4 sm:me-1.5 lg:me-0" />
+                  <span className="hidden sm:inline lg:hidden">הוסף</span>
                 </Button>
               )}
 
@@ -387,12 +387,12 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
                   variant="outline"
                   aria-label={`בחר אפשרות עבור ${product.name}`}
                   className={cn(
-                    "rounded-full p-2 sm:px-5 sm:py-2 text-sm font-medium border-gold-500/30 hover:border-gold-500 hover:bg-gold-500/10",
+                    "rounded-full p-2 sm:px-5 sm:py-2 lg:p-2 text-sm font-medium border-gold-500/30 hover:border-gold-500 hover:bg-gold-500/10",
                     isLight ? "text-neutral-700" : "text-white"
                   )}
                 >
-                  <ShoppingBag className="h-4 w-4 sm:hidden" />
-                  <span className="hidden sm:inline">בחר אפשרות</span>
+                  <ShoppingBag className="h-4 w-4" />
+                  <span className="hidden sm:inline lg:hidden ms-1.5">בחר אפשרות</span>
                 </Button>
               )}
             </div>

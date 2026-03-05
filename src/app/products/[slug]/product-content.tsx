@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Truck, Shield, RotateCcw } from 'lucide-react';
 import { omni, getClient } from '@/lib/omni-sync';
-import { cn, formatPrice } from '@/lib/utils';
+import { cn, formatPrice, logError, getErrorMessage } from '@/lib/utils';
 import { useCart } from '@/providers/store-provider';
 import { useCartStore } from '@/store/cart-store';
 import { Button } from '@/components/ui/button';
@@ -126,8 +126,8 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
       await refreshCart();
       openCart();
     } catch (err) {
-      console.error('Failed to add to cart:', err);
-      setError(err instanceof Error ? err.message : 'שגיאה בהוספה לסל');
+      logError('Failed to add to cart:', err);
+      setError(getErrorMessage(err) || 'שגיאה בהוספה לסל');
     } finally {
       setIsAddingToCart(false);
     }

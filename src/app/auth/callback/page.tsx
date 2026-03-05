@@ -3,13 +3,13 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { omni, setCustomerToken, getCartId } from '@/lib/omni-sync';
+import { omni, getCartId } from '@/lib/omni-sync';
 import { useAuthStore } from '@/store/auth-store';
 
 function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { fetchProfile } = useAuthStore();
+  const { loginWithToken } = useAuthStore();
 
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -22,9 +22,8 @@ function AuthCallbackContent() {
       const token = searchParams.get('token');
 
       if (oauthSuccess === 'true' && token) {
-        // Set the customer token
-        setCustomerToken(token);
-        omni.setCustomerToken(token);
+        // Login with token - this sets isAuthenticated immediately and fetches profile
+        await loginWithToken(token);
 
         // Link cart if exists
         const cartId = getCartId();
@@ -36,18 +35,11 @@ function AuthCallbackContent() {
           }
         }
 
-        // Fetch profile (don't block redirect if this fails)
-        try {
-          await fetchProfile();
-        } catch (err) {
-          console.error('Error fetching profile:', err);
-        }
-
         setStatus('success');
 
-        // Redirect after a short delay
+        // Use router.push instead of window.location.href to avoid full page reload
         setTimeout(() => {
-          window.location.href = '/account';
+          router.push('/account');
         }, 1500);
       } else if (oauthError) {
         setError(oauthError);
@@ -60,8 +52,12 @@ function AuthCallbackContent() {
       }
     }
 
-    handleCallback();
-  }, [searchParams, router, fetchProfile]);
+    handleCallback().catch((err) => {
+      console.error('Auth callback error:', err);
+      setError('שגיאה בהתחברות');
+      setStatus('error');
+    });
+  }, [searchParams, router, loginWithToken]);
 
   if (status === 'error') {
     return (

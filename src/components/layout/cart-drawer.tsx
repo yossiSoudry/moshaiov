@@ -9,7 +9,7 @@ import { useCartStore } from '@/store/cart-store';
 import { useCart } from '@/providers/store-provider';
 import { getClient } from '@/lib/omni-sync';
 import { Button } from '@/components/ui/button';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, logError } from '@/lib/utils';
 
 export function CartDrawer() {
   const { cart, refreshCart } = useCart();
@@ -28,7 +28,7 @@ export function CartDrawer() {
       await client.smartUpdateCartItem(item.product.id, quantity, item.variant?.id);
       await refreshCart();
     } catch (err) {
-      console.error('Failed to update quantity:', err);
+      logError('Failed to update quantity:', err);
     } finally {
       setIsLoading(false);
     }
@@ -45,7 +45,7 @@ export function CartDrawer() {
       await client.smartRemoveFromCart(item.product.id, item.variant?.id);
       await refreshCart();
     } catch (err) {
-      console.error('Failed to remove item:', err);
+      logError('Failed to remove item:', err);
     } finally {
       setIsLoading(false);
     }

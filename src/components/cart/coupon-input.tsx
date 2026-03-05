@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { Cart } from 'brainerce';
 import { getClient } from '@/lib/omni-sync';
-import { cn } from '@/lib/utils';
+import { cn, logError, getErrorMessage } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
 interface CouponInputProps {
@@ -32,7 +32,7 @@ export function CouponInput({ cart, onUpdate, className }: CouponInputProps) {
       setCode('');
       onUpdate();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'קוד קופון לא תקף';
+      const message = getErrorMessage(err) || 'קוד קופון לא תקף';
       setError(message);
     } finally {
       setApplying(false);
@@ -49,7 +49,7 @@ export function CouponInput({ cart, onUpdate, className }: CouponInputProps) {
       await client.removeCoupon(cart.id);
       onUpdate();
     } catch (err) {
-      console.error('Failed to remove coupon:', err);
+      logError('Failed to remove coupon:', err);
     } finally {
       setRemoving(false);
     }

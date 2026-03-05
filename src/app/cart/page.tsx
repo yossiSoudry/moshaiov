@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/providers/store-provider';
 import { getClient } from '@/lib/omni-sync';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, logError, getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -54,7 +54,7 @@ export default function CartPage() {
         await refreshCart();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'שגיאה בעדכון כמות');
+      setError(getErrorMessage(err) || 'שגיאה בעדכון כמות');
     } finally {
       setIsLoading(false);
     }
@@ -72,7 +72,7 @@ export default function CartPage() {
         await refreshCart();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'שגיאה בהסרת פריט');
+      setError(getErrorMessage(err) || 'שגיאה בהסרת פריט');
     } finally {
       setIsLoading(false);
     }
@@ -130,7 +130,7 @@ export default function CartPage() {
       setCouponCode('');
       await refreshCart();
     } catch (err) {
-      setCouponError(err instanceof Error ? err.message : 'קוד קופון לא תקין');
+      setCouponError(getErrorMessage(err) || 'קוד קופון לא תקין');
     } finally {
       setIsApplyingCoupon(false);
     }
@@ -144,7 +144,7 @@ export default function CartPage() {
       await client.removeCoupon(cart.id);
       await refreshCart();
     } catch (err) {
-      console.error('Failed to remove coupon:', err);
+      logError('Failed to remove coupon:', err);
     }
   };
 
@@ -159,7 +159,7 @@ export default function CartPage() {
       sessionStorage.setItem('checkoutSelectedIndices', JSON.stringify(selectedIndices));
       router.push('/checkout');
     } catch (err) {
-      console.error('Checkout error:', err);
+      logError('Checkout error:', err);
     } finally {
       setIsCheckingOut(false);
     }

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { CheckCircle, Package, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import { omni, clearCartId } from '@/lib/omni-sync';
+import { logError } from '@/lib/utils';
 import { useCartStore } from '@/store/cart-store';
 import { Button } from '@/components/ui/button';
 
@@ -74,7 +75,7 @@ function CheckoutSuccessContent() {
           setStatus('success');
         }
       } catch (err) {
-        console.error('Error processing order completion:', err);
+        logError('Error processing order completion:', err);
         // If there's an error but we have a checkoutId, still show success
         // The order might just be processing
         setStatus('success');
