@@ -12,7 +12,7 @@ import {
   Minus,
   Plus,
 } from 'lucide-react';
-import { Truck, Shield, RotateCcw } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { omni, getClient } from '@/lib/omni-sync';
 import { cn, formatPrice, logError, getErrorMessage } from '@/lib/utils';
 import { useCart } from '@/providers/store-provider';
@@ -26,10 +26,12 @@ import type { Product, ProductVariant } from 'brainerce';
 // Metafield type for display
 interface MetafieldDisplay {
   id?: string;
+  definitionId?: string;
   definitionName: string;
   definitionKey?: string;
   value: string | number | boolean;
-  type?: string;
+  type?: 'IMAGE' | 'TEXT' | 'NUMBER' | 'BOOLEAN' | 'URL' | 'DATE' | 'RICH_TEXT' | string;
+  variantId?: string | null;
 }
 
 interface InitialProductData {
@@ -506,41 +508,8 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
                 </div>
               )}
 
-              {/* Metafields / Product Details */}
-              {product.metafields && (product.metafields as unknown as MetafieldDisplay[]).length > 0 && (
-                <div className="mb-6">
-                  <h3 className="font-medium mb-3">פרטי המוצר</h3>
-                  <div className="bg-muted rounded-lg overflow-hidden">
-                    <table className="w-full text-sm">
-                      <tbody>
-                        {(product.metafields as unknown as MetafieldDisplay[]).map((mf, index) => (
-                          <tr
-                            key={mf.id || `metafield-${index}`}
-                            className={index % 2 === 0 ? 'bg-muted' : 'bg-background/50'}
-                          >
-                            <td className="py-2 px-4 font-medium text-muted-foreground">
-                              {mf.definitionName || (mf as unknown as { name?: string }).name || 'פרט'}
-                            </td>
-                            <td className="py-2 px-4 text-foreground">
-                              {String(mf.value)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
               {/* Features */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                  <Truck className="h-5 w-5 text-muted-foreground" />
-                  <div className="text-sm">
-                    <p className="font-medium">משלוח חינם</p>
-                    <p className="text-muted-foreground">בהזמנות מעל ₪500</p>
-                  </div>
-                </div>
+              <div className="flex flex-row flex-wrap items-start gap-4">
                 <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                   <Shield className="h-5 w-5 text-muted-foreground" />
                   <div className="text-sm">
@@ -548,13 +517,73 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
                     <p className="text-muted-foreground">על כל תכשיט</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                  <RotateCcw className="h-5 w-5 text-muted-foreground" />
-                  <div className="text-sm">
-                    <p className="font-medium">החזרות</p>
-                    <p className="text-muted-foreground">עד 14 יום</p>
-                  </div>
-                </div>
+                {/* Custom fields from server */}
+                {product.metafields && (product.metafields as unknown as MetafieldDisplay[]).map((mf, index) => {
+                  const fieldName = mf.definitionName || (mf as unknown as { name?: string }).name || 'פרט';
+
+                  // Skip empty values
+                  if (mf.value === null || mf.value === undefined || mf.value === '') {
+                    return null;
+                  }
+
+                  // Handle IMAGE type - show the image
+                  if (mf.type === 'IMAGE' && typeof mf.value === 'string' && mf.value.trim() !== '') {
+                    return (
+                      <div key={mf.id || `feature-${index}`} className="flex flex-col gap-2 p-3 bg-muted rounded-lg">
+                        <p className="text-sm font-medium">{fieldName}</p>
+                        <Image
+                          src={mf.value}
+                          alt={fieldName}
+                          width={80}
+                          height={80}
+                          className="rounded-md object-cover"
+                          unoptimized
+                        />
+                      </div>
+                    );
+                  }
+
+                  // Handle BOOLEAN type
+                  if (mf.type === 'BOOLEAN') {
+                    return (
+                      <div key={mf.id || `feature-${index}`} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                        <div className="text-sm">
+                          <p className="font-medium">{fieldName}</p>
+                          <p className="text-muted-foreground">{mf.value ? 'כן' : 'לא'}</p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Handle URL type - show as link
+                  if (mf.type === 'URL' && typeof mf.value === 'string' && mf.value.trim() !== '') {
+                    return (
+                      <div key={mf.id || `feature-${index}`} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                        <div className="text-sm">
+                          <p className="font-medium">{fieldName}</p>
+                          <a
+                            href={mf.value}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            לחץ כאן
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Default: TEXT, NUMBER, DATE, RICH_TEXT, etc.
+                  return (
+                    <div key={mf.id || `feature-${index}`} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                      <div className="text-sm">
+                        <p className="font-medium">{fieldName}</p>
+                        <p className="text-muted-foreground">{String(mf.value)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </motion.div>
           </div>
