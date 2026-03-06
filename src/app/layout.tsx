@@ -8,6 +8,7 @@ import { StoreProvider } from "@/providers/store-provider";
 import { FlyToCartProvider } from "@/components/ui/fly-to-cart";
 import { CookieConsent } from "@/components/ui/cookie-consent";
 import { GlobalErrorHandler } from "@/components/providers/error-boundary";
+import { AccessibilityWidget } from "@/components/accessibility/accessibility-widget";
 
 const heebo = Heebo({
   variable: "--font-heebo",
@@ -200,20 +201,13 @@ export default function RootLayout({
           <StoreProvider>
             <FlyToCartProvider>
               <Header />
-              <main className="flex-1">{children}</main>
+              <main className="flex-1 pt-20 sm:pt-24">{children}</main>
               <Footer />
               <CookieConsent />
+              <AccessibilityWidget />
             </FlyToCartProvider>
           </StoreProvider>
         </GlobalErrorHandler>
-
-        {/* UserWay Accessibility Widget */}
-        <Script
-          src="https://cdn.userway.org/widget.js"
-          data-account="YOUR_ACCOUNT_ID"
-          data-position="5"
-          strategy="lazyOnload"
-        />
       </body>
     </html>
   );
