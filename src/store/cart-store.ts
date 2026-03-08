@@ -48,6 +48,7 @@ interface CartState {
 
   // Actions
   setHasHydrated: (state: boolean) => void;
+  setCartFromResponse: (cartResponse: Cart | LocalCart | null) => void;
   initCart: () => Promise<void>;
   addToCart: (productId: string, variantId?: string, quantity?: number) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
@@ -142,6 +143,35 @@ export const useCartStore = create<CartState>()(
 
       setHasHydrated: (state: boolean) => {
         set({ hasHydrated: state });
+      },
+
+      // Set cart directly from a Cart or LocalCart response
+      setCartFromResponse: (cartResponse: Cart | LocalCart | null) => {
+        if (!cartResponse) {
+          clearCartId();
+          set({ cart: null, serverCartId: null });
+          return;
+        }
+
+        // Check if it's a server cart (has ID) or local cart
+        if ('id' in cartResponse && cartResponse.id) {
+          const cart = cartResponse as Cart;
+          setCartId(cart.id);
+          set({
+            cart: serverCartToDisplay(cart),
+            serverCartId: cart.id,
+          });
+        } else if ('items' in cartResponse) {
+          const localCart = cartResponse as LocalCart;
+          if (localCart.items.length === 0) {
+            set({ cart: null, serverCartId: null });
+          } else {
+            set({
+              cart: localCartToDisplay(localCart),
+              serverCartId: null,
+            });
+          }
+        }
       },
 
       // Initialize cart using smartGetCart - handles both logged-in and guest users

@@ -28,7 +28,7 @@ import { Separator } from '@/components/ui/separator';
 export default function CartPage() {
   const router = useRouter();
   const { cart: contextCart, cartLoading, refreshCart } = useCart();
-  const { cart: storeCart, initCart, isLoading: storeLoading, hasHydrated } = useCartStore();
+  const { cart: storeCart, initCart, isLoading: storeLoading, hasHydrated, setCartFromResponse } = useCartStore();
 
   // Use store cart (supports local cart for guests) or fall back to context cart
   const cart = storeCart || contextCart;
@@ -64,9 +64,13 @@ export default function CartPage() {
       const client = getClient();
       const item = items.find(i => i.id === itemId);
       if (item) {
-        await client.smartUpdateCartItem(item.productId, quantity, item.variantId || undefined);
-        await refreshCart();
-        await initCart(); // Sync store cart
+        const updatedCart = await client.smartUpdateCartItem(item.productId, quantity, item.variantId || undefined);
+        // Update store directly with the returned cart
+        setCartFromResponse(updatedCart);
+        // Also refresh context cart for server carts
+        if (isServerCart) {
+          await refreshCart();
+        }
       }
     } catch (err) {
       setError(getErrorMessage(err) || 'שגיאה בעדכון כמות');
@@ -83,9 +87,13 @@ export default function CartPage() {
       const client = getClient();
       const item = items.find(i => i.id === itemId);
       if (item) {
-        await client.smartRemoveFromCart(item.productId, item.variantId || undefined);
-        await refreshCart();
-        await initCart(); // Sync store cart
+        const updatedCart = await client.smartRemoveFromCart(item.productId, item.variantId || undefined);
+        // Update store directly with the returned cart
+        setCartFromResponse(updatedCart);
+        // Also refresh context cart for server carts
+        if (isServerCart) {
+          await refreshCart();
+        }
       }
     } catch (err) {
       setError(getErrorMessage(err) || 'שגיאה בהסרת פריט');
