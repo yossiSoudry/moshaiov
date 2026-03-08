@@ -141,7 +141,7 @@ export function AccessibilityWidget() {
       x: 0,
       opacity: 1,
       transition: {
-        type: 'spring',
+        type: 'spring' as const,
         damping: 30,
         stiffness: 300,
       },
