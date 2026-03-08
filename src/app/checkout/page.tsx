@@ -7,6 +7,7 @@ import Link from 'next/link';
 import type { Checkout, ShippingRate, SetShippingAddressDto } from 'brainerce';
 import { getClient, isLoggedIn, clearCartId } from '@/lib/omni-sync';
 import { useCart, useAuth } from '@/providers/store-provider';
+import { useCartStore } from '@/store/cart-store';
 import { formatPrice, cn, logError, getErrorMessage } from '@/lib/utils';
 import { CheckoutForm } from '@/components/checkout/checkout-form';
 import { ShippingStep } from '@/components/checkout/shipping-step';
@@ -34,8 +35,12 @@ interface PickupLocation {
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
-  const { cart, refreshCart } = useCart();
+  const { cart: contextCart, refreshCart } = useCart();
+  const { cart: storeCart, hasHydrated } = useCartStore();
   const { isLoggedIn: isUserLoggedIn } = useAuth();
+
+  // Use store cart (supports local cart for guests) or fall back to context cart
+  const cart = storeCart || contextCart;
 
   const [checkout, setCheckout] = useState<Checkout | null>(null);
   const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
@@ -127,7 +132,8 @@ function CheckoutContent() {
     }
   }, [existingCheckoutId, cart, isUserLoggedIn, refreshCart]);
 
-  const cartLoaded = cart !== null;
+  // Wait for store hydration and cart to be available
+  const cartLoaded = hasHydrated && cart !== null;
   useEffect(() => {
     if (cartLoaded) {
       initCheckout().catch((err) => logError('Checkout initialization error:', err));
