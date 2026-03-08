@@ -135,10 +135,13 @@ export const useCartStore = create<CartState>()(
       // Add item to cart
       addToCart: async (productId: string, variantId?: string, quantity: number = 1) => {
         console.log('addToCart called:', { productId, variantId, quantity });
+        console.log('isLoggedIn:', isLoggedIn());
+        console.log('stored cartId:', getCartId());
         set({ isLoading: true, error: null });
 
         try {
           const client = getClient();
+          console.log('client initialized, calling smartAddToCart...');
 
           // Use smartAddToCart - handles both guest and logged-in users automatically
           const updatedCart = await client.smartAddToCart({
@@ -146,6 +149,8 @@ export const useCartStore = create<CartState>()(
             variantId,
             quantity,
           });
+
+          console.log('smartAddToCart response:', updatedCart);
 
           // Only process server carts with ID
           if (updatedCart && 'id' in updatedCart && updatedCart.id) {
@@ -168,6 +173,9 @@ export const useCartStore = create<CartState>()(
           }
 
         } catch (err) {
+          console.error('Add to cart error (full):', err);
+          console.error('Error type:', typeof err);
+          console.error('Error keys:', err ? Object.keys(err as object) : 'null');
           logError('Add to cart error:', err);
           set({
             error: getErrorMessage(err) || 'שגיאה בהוספה לעגלה',
