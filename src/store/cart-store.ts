@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getClient, initClient, getCartId, setCartId, clearCartId, isLoggedIn } from '@/lib/omni-sync';
 import { logError, getErrorMessage } from '@/lib/utils';
-import type { Cart } from 'brainerce';
+import type { Cart, LocalCart } from 'brainerce';
 
 // Unified cart item structure (works with both server and local cart)
 interface CartItemDisplay {
@@ -95,6 +95,39 @@ function serverCartToDisplay(cart: Cart): CartDisplay {
   };
 }
 
+// Convert local cart to display format
+function localCartToDisplay(cart: LocalCart): CartDisplay {
+  const subtotal = cart.items.reduce((sum, item) => {
+    const price = parseFloat(item.price || '0');
+    return sum + (price * item.quantity);
+  }, 0);
+
+  return {
+    id: 'local-cart',
+    items: cart.items.map((item, index) => ({
+      id: `local-${index}`,
+      productId: item.productId,
+      variantId: item.variantId,
+      quantity: item.quantity,
+      product: {
+        id: item.productId,
+        name: item.name || 'מוצר',
+        slug: undefined,
+        images: item.image ? [{ url: item.image }] : undefined,
+      },
+      variant: item.variantId ? {
+        id: item.variantId,
+        name: item.variantName || '',
+      } : undefined,
+      unitPrice: item.price || '0',
+    })),
+    subtotal: subtotal.toString(),
+    total: subtotal.toString(),
+    itemCount: cart.items.reduce((sum, item) => sum + item.quantity, 0),
+    isServerCart: false,
+  };
+}
+
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
@@ -152,10 +185,11 @@ export const useCartStore = create<CartState>()(
 
           console.log('smartAddToCart response:', updatedCart);
 
-          // Only process server carts with ID
+          // Check if it's a server cart (has ID) or local cart
           if (updatedCart && 'id' in updatedCart && updatedCart.id) {
+            // Server cart
             const cart = updatedCart as Cart;
-            console.log('Cart updated with discounts:', {
+            console.log('Server cart updated with discounts:', {
               subtotal: cart.subtotal,
               discountAmount: cart.discountAmount,
             });
@@ -168,7 +202,18 @@ export const useCartStore = create<CartState>()(
               serverCartId: cart.id,
               isLoading: false,
             });
+          } else if (updatedCart && 'items' in updatedCart) {
+            // Local cart (for guests)
+            const localCart = updatedCart as LocalCart;
+            console.log('Local cart updated:', localCart);
+
+            set({
+              cart: localCartToDisplay(localCart),
+              serverCartId: null,
+              isLoading: false,
+            });
           } else {
+            console.log('Unknown cart response:', updatedCart);
             set({ isLoading: false });
           }
 
