@@ -44,8 +44,10 @@ interface CartState {
   isOpen: boolean;
   error: string | null;
   serverCartId: string | null;
+  hasHydrated: boolean;
 
   // Actions
+  setHasHydrated: (state: boolean) => void;
   initCart: () => Promise<void>;
   addToCart: (productId: string, variantId?: string, quantity?: number) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
@@ -136,6 +138,11 @@ export const useCartStore = create<CartState>()(
       isOpen: false,
       error: null,
       serverCartId: null,
+      hasHydrated: false,
+
+      setHasHydrated: (state: boolean) => {
+        set({ hasHydrated: state });
+      },
 
       // Initialize cart using smartGetCart - handles both logged-in and guest users
       initCart: async () => {
@@ -387,6 +394,9 @@ export const useCartStore = create<CartState>()(
         cart: state.cart,
         serverCartId: state.serverCartId,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

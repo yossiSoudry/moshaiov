@@ -28,11 +28,14 @@ import { Separator } from '@/components/ui/separator';
 export default function CartPage() {
   const router = useRouter();
   const { cart: contextCart, cartLoading, refreshCart } = useCart();
-  const { cart: storeCart, initCart, isLoading: storeLoading } = useCartStore();
+  const { cart: storeCart, initCart, isLoading: storeLoading, hasHydrated } = useCartStore();
 
   // Use store cart (supports local cart for guests) or fall back to context cart
   const cart = storeCart || contextCart;
   const isServerCart = storeCart?.isServerCart !== false;
+
+  // Wait for store to hydrate from localStorage before showing content
+  const isHydrating = !hasHydrated;
 
   // Initialize store cart on mount
   useEffect(() => {
@@ -187,7 +190,7 @@ export default function CartPage() {
   };
 
   // Show loading state while carts are being fetched
-  if (storeLoading || cartLoading) {
+  if (isHydrating || storeLoading || cartLoading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 pt-20">
         <div className="absolute inset-x-0 top-0 h-20 bg-black z-40" />
