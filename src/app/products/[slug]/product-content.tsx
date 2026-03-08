@@ -69,7 +69,7 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
   const [isFavorite, setIsFavorite] = useState(false);
 
   const { refreshCart } = useCart();
-  const { openCart } = useCartStore();
+  const { openCart, addToCart: storeAddToCart, isLoading: cartLoading } = useCartStore();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   useEffect(() => {
@@ -100,31 +100,21 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
   }, [slug, initialProduct]);
 
   const handleAddToCart = async () => {
-    if (!product || isAddingToCart) return;
+    if (!product || isAddingToCart || cartLoading) return;
     try {
       setIsAddingToCart(true);
       setError(null);
-      const client = getClient();
 
-      console.log('Adding to cart:', {
+      console.log('Adding to cart via store:', {
         productId: product.id,
         variantId: selectedVariant?.id,
         quantity,
-        name: product.name,
-        price: String(currentPrice),
       });
 
-      const result = await client.smartAddToCart({
-        productId: product.id,
-        variantId: selectedVariant?.id,
-        quantity,
-        name: product.name,
-        price: String(currentPrice),
-        image: displayImage || undefined,
-      });
+      // Use the unified cart store - handles both server and local carts
+      await storeAddToCart(product.id, selectedVariant?.id, quantity);
 
-      console.log('Add to cart result:', result);
-
+      // Also refresh the context cart for server carts
       await refreshCart();
       openCart();
     } catch (err) {
