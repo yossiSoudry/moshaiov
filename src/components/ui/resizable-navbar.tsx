@@ -59,7 +59,7 @@ export const Navbar = ({ children, className, alwaysVisible = false }: NavbarPro
   });
 
   // Pages with light backgrounds need the navbar to always be visible
-  const lightBackgroundPages = ['/cart', '/account', '/login', '/register', '/forgot-password', '/accessibility'];
+  const lightBackgroundPages = ['/cart', '/account', '/login', '/register', '/forgot-password'];
   const isLightBackgroundPage = lightBackgroundPages.some(page => pathname?.startsWith(page));
   const shouldAlwaysBeVisible = alwaysVisible || isLightBackgroundPage;
 
