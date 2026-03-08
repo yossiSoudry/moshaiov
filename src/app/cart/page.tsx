@@ -18,6 +18,7 @@ import {
   Percent,
 } from 'lucide-react';
 import { useCart } from '@/providers/store-provider';
+import { useCartStore } from '@/store/cart-store';
 import { getClient } from '@/lib/omni-sync';
 import { formatPrice, logError, getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,17 @@ import { Separator } from '@/components/ui/separator';
 
 export default function CartPage() {
   const router = useRouter();
-  const { cart, cartLoading, refreshCart } = useCart();
+  const { cart: contextCart, cartLoading, refreshCart } = useCart();
+  const { cart: storeCart, initCart, isLoading: storeLoading } = useCartStore();
+
+  // Use store cart (supports local cart for guests) or fall back to context cart
+  const cart = storeCart || contextCart;
+  const isServerCart = storeCart?.isServerCart !== false;
+
+  // Initialize store cart on mount
+  useEffect(() => {
+    initCart();
+  }, [initCart]);
 
   const [couponCode, setCouponCode] = useState('');
   const [couponError, setCouponError] = useState('');
@@ -52,6 +63,7 @@ export default function CartPage() {
       if (item) {
         await client.smartUpdateCartItem(item.productId, quantity, item.variantId || undefined);
         await refreshCart();
+        await initCart(); // Sync store cart
       }
     } catch (err) {
       setError(getErrorMessage(err) || 'שגיאה בעדכון כמות');
@@ -70,6 +82,7 @@ export default function CartPage() {
       if (item) {
         await client.smartRemoveFromCart(item.productId, item.variantId || undefined);
         await refreshCart();
+        await initCart(); // Sync store cart
       }
     } catch (err) {
       setError(getErrorMessage(err) || 'שגיאה בהסרת פריט');
@@ -116,10 +129,16 @@ export default function CartPage() {
     ? (selectedSubtotal / subtotal) * discountAmount
     : 0;
 
-  // Apply coupon
+  // Apply coupon (only works for server carts)
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponCode.trim() || !cart) return;
+
+    // Coupons only work with server carts
+    if (!isServerCart) {
+      setCouponError('יש להתחבר כדי להשתמש בקופון');
+      return;
+    }
 
     setIsApplyingCoupon(true);
     setCouponError('');
@@ -129,6 +148,7 @@ export default function CartPage() {
       await client.applyCoupon(cart.id, couponCode.trim());
       setCouponCode('');
       await refreshCart();
+      await initCart();
     } catch (err) {
       setCouponError(getErrorMessage(err) || 'קוד קופון לא תקין');
     } finally {
@@ -138,11 +158,12 @@ export default function CartPage() {
 
   // Remove coupon
   const handleRemoveCoupon = async () => {
-    if (!cart) return;
+    if (!cart || !isServerCart) return;
     try {
       const client = getClient();
       await client.removeCoupon(cart.id);
       await refreshCart();
+      await initCart();
     } catch (err) {
       logError('Failed to remove coupon:', err);
     }
@@ -164,6 +185,19 @@ export default function CartPage() {
       setIsCheckingOut(false);
     }
   };
+
+  // Show loading state while carts are being fetched
+  if (storeLoading || cartLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 pt-20">
+        <div className="absolute inset-x-0 top-0 h-20 bg-black z-40" />
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">טוען עגלה...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
