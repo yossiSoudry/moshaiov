@@ -12,9 +12,12 @@ import { Button } from '@/components/ui/button';
 import { formatPrice, logError } from '@/lib/utils';
 
 export function CartDrawer() {
-  const { cart, refreshCart } = useCart();
-  const { isOpen, toggleCart } = useCartStore();
+  const { cart: contextCart, refreshCart } = useCart();
+  const { isOpen, toggleCart, cart: storeCart } = useCartStore();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Use store cart (for local carts) or context cart (for server carts)
+  const cart = storeCart || contextCart;
 
   // Update quantity handler using smartUpdateCartItem
   async function updateQuantity(itemId: string, quantity: number) {
