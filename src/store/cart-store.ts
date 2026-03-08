@@ -117,7 +117,7 @@ function localCartToDisplay(cart: LocalCart): CartDisplay {
       },
       variant: item.variantId ? {
         id: item.variantId,
-        name: item.variantName || '',
+        name: '',
       } : undefined,
       unitPrice: item.price || '0',
     })),
