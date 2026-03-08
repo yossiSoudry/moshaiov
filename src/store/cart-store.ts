@@ -50,7 +50,7 @@ interface CartState {
   setHasHydrated: (state: boolean) => void;
   setCartFromResponse: (cartResponse: Cart | LocalCart | null) => void;
   initCart: () => Promise<void>;
-  addToCart: (productId: string, variantId?: string, quantity?: number) => Promise<void>;
+  addToCart: (productId: string, variantId?: string, quantity?: number, productInfo?: { name: string; price: string; image?: string }) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   applyCoupon: (code: string) => Promise<void>;
@@ -203,8 +203,8 @@ export const useCartStore = create<CartState>()(
       },
 
       // Add item to cart
-      addToCart: async (productId: string, variantId?: string, quantity: number = 1) => {
-        console.log('addToCart called:', { productId, variantId, quantity });
+      addToCart: async (productId: string, variantId?: string, quantity: number = 1, productInfo?: { name: string; price: string; image?: string }) => {
+        console.log('addToCart called:', { productId, variantId, quantity, productInfo });
         console.log('isLoggedIn:', isLoggedIn());
         console.log('stored cartId:', getCartId());
         set({ isLoading: true, error: null });
@@ -214,10 +214,17 @@ export const useCartStore = create<CartState>()(
           console.log('client initialized, calling smartAddToCart...');
 
           // Use smartAddToCart - handles both guest and logged-in users automatically
+          // Include product info for local cart display
           const updatedCart = await client.smartAddToCart({
             productId,
             variantId,
             quantity,
+            // For local cart, include product details
+            ...(productInfo && {
+              name: productInfo.name,
+              price: productInfo.price,
+              image: productInfo.image,
+            }),
           });
 
           console.log('smartAddToCart response:', updatedCart);

@@ -105,14 +105,26 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
       setIsAddingToCart(true);
       setError(null);
 
+      // Get current price for local cart
+      const price = getVariantPriceValue();
+      const image = product?.images?.[0]?.url;
+
       console.log('Adding to cart via store:', {
         productId: product.id,
         variantId: selectedVariant?.id,
         quantity,
+        name: product.name,
+        price,
+        image,
       });
 
       // Use the unified cart store - handles both server and local carts
-      await storeAddToCart(product.id, selectedVariant?.id, quantity);
+      // Pass product info for local cart display
+      await storeAddToCart(product.id, selectedVariant?.id, quantity, {
+        name: product.name,
+        price: price.toString(),
+        image,
+      });
 
       // Also refresh the context cart for server carts
       await refreshCart();
