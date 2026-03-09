@@ -4,10 +4,9 @@ import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import type { Checkout, ShippingRate, SetShippingAddressDto } from 'brainerce';
-import { getClient, isLoggedIn, clearCartId } from '@/lib/omni-sync';
+import type { Checkout, ShippingRate, SetShippingAddressDto, ShippingDestinations, PickupLocation } from 'brainerce';
+import { getClient, clearCartId } from '@/lib/omni-sync';
 import { useCart, useAuth } from '@/providers/store-provider';
-import { useCartStore } from '@/store/cart-store';
 import { formatPrice, cn, logError, getErrorMessage } from '@/lib/utils';
 import { CheckoutForm } from '@/components/checkout/checkout-form';
 import { ShippingStep } from '@/components/checkout/shipping-step';
@@ -17,30 +16,10 @@ import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import { DeliveryMethodStep } from '@/components/checkout/delivery-method-step';
 import { PickupStep } from '@/components/checkout/pickup-step';
 
-// Local type for pickup locations (in case brainerce doesn't export it)
-interface PickupLocation {
-  id: string;
-  name: string;
-  price: string;
-  address: {
-    line1: string;
-    city?: string;
-    region?: string;
-    postalCode?: string;
-    country?: string;
-  };
-  hours?: string;
-  instructions?: string;
-}
-
 function CheckoutContent() {
   const searchParams = useSearchParams();
-  const { cart: contextCart, refreshCart } = useCart();
-  const { cart: storeCart, hasHydrated } = useCartStore();
+  const { cart, cartLoading, refreshCart } = useCart();
   const { isLoggedIn: isUserLoggedIn } = useAuth();
-
-  // Use store cart (supports local cart for guests) or fall back to context cart
-  const cart = storeCart || contextCart;
 
   const [checkout, setCheckout] = useState<Checkout | null>(null);
   const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
@@ -50,6 +29,9 @@ function CheckoutContent() {
   const [error, setError] = useState<string | null>(null);
   const [addressSaved, setAddressSaved] = useState(false);
   const [shippingSelected, setShippingSelected] = useState(false);
+
+  // Shipping destinations (countries/regions from server)
+  const [destinations, setDestinations] = useState<ShippingDestinations | null>(null);
 
   // Pickup support
   const [deliveryMethod, setDeliveryMethod] = useState<'shipping' | 'pickup' | null>(null);
@@ -67,43 +49,57 @@ function CheckoutContent() {
       setError(null);
       const client = getClient();
 
+      // Fetch shipping destinations and pickup locations in parallel (like test_store)
+      client
+        .getShippingDestinations()
+        .then(setDestinations)
+        .catch(() => {});
+
+      const locations = await client.getPickupLocations().catch(() => [] as PickupLocation[]);
+      setPickupLocations(locations);
+
       // If returning with existing checkout ID, resume it
       if (existingCheckoutId) {
         const existing = await client.getCheckout(existingCheckoutId);
         setCheckout(existing);
 
-        // Restore state based on checkout
-        if (existing.shippingAddress && existing.shippingRateId) {
+        // Restore state based on checkout (including pickup)
+        if (existing.deliveryType === 'pickup' && existing.pickupLocation) {
+          setDeliveryMethod('pickup');
+          setPickupSelected(true);
+        } else if (existing.shippingAddress && existing.shippingRateId) {
+          setDeliveryMethod('shipping');
           setAddressSaved(true);
           setShippingSelected(true);
           setSelectedRateId(existing.shippingRateId);
           const rates = await client.getShippingRates(existing.id);
           setShippingRates(rates);
         } else if (existing.shippingAddress) {
+          setDeliveryMethod('shipping');
           setAddressSaved(true);
           const rates = await client.getShippingRates(existing.id);
           setShippingRates(rates);
+        } else if (locations.length > 0) {
+          // Has pickup locations - let user choose method
         }
         return;
       }
 
-      // Create new checkout — cart is always server-side now
-      if (cart && cart.id) {
-        if (isUserLoggedIn) {
-          // Logged-in user: create checkout from customer cart
-          console.log('🛒 Creating checkout for logged-in user from cart:', cart.id);
-          const newCheckout = await client.createCheckout({ cartId: cart.id });
+      // Create new checkout
+      if (isUserLoggedIn && cart && cart.id) {
+        // Logged-in user: create checkout from customer cart
+        console.log('🛒 Creating checkout for logged-in user from cart:', cart.id);
+        const newCheckout = await client.createCheckout({ cartId: cart.id });
+        setCheckout(newCheckout);
+      } else if (!isUserLoggedIn && cart && cart.items && cart.items.length > 0) {
+        // Guest user: start guest checkout (creates checkout from session cart)
+        console.log('🛒 Starting guest checkout');
+        const result = await client.startGuestCheckout();
+        if (result.tracked) {
+          const newCheckout = await client.getCheckout(result.checkoutId);
           setCheckout(newCheckout);
         } else {
-          // Guest user: start guest checkout (creates checkout from session cart)
-          console.log('🛒 Starting guest checkout');
-          const result = await client.startGuestCheckout();
-          if (result.tracked) {
-            const newCheckout = await client.getCheckout(result.checkoutId);
-            setCheckout(newCheckout);
-          } else {
-            setError('לא ניתן להתחיל את התשלום. אנא נסה שנית.');
-          }
+          setError('לא ניתן להתחיל את התשלום. אנא נסה שנית.');
         }
       } else {
         setError('העגלה ריקה.');
@@ -132,8 +128,8 @@ function CheckoutContent() {
     }
   }, [existingCheckoutId, cart, isUserLoggedIn, refreshCart]);
 
-  // Wait for store hydration and cart to be available
-  const cartLoaded = hasHydrated && cart !== null;
+  // Wait for cart to be available
+  const cartLoaded = !cartLoading && cart !== null;
   useEffect(() => {
     if (cartLoaded) {
       initCheckout().catch((err) => logError('Checkout initialization error:', err));
@@ -183,53 +179,10 @@ function CheckoutContent() {
   }
 
   // Handle delivery method selection (shipping vs pickup)
-  async function handleDeliveryMethodSelect(method: 'shipping' | 'pickup') {
+  // Pickup locations are already fetched at init, so just set the method
+  function handleDeliveryMethodSelect(method: 'shipping' | 'pickup') {
     setDeliveryMethod(method);
     setError(null);
-
-    if (method === 'pickup' && checkout) {
-      try {
-        setLoading(true);
-        const client = getClient() as unknown as Record<string, unknown>;
-        // Try to get pickup locations if available
-        if (typeof client.getPickupLocations === 'function') {
-          const locations = await (client.getPickupLocations as (id: string) => Promise<PickupLocation[]>)(checkout.id);
-          setPickupLocations(locations || []);
-        } else {
-          // Fallback: define store pickup locations manually
-          setPickupLocations([
-            {
-              id: 'store-pickup',
-              name: 'איסוף מהחנות',
-              price: '0',
-              address: {
-                line1: 'כתובת החנות',
-                city: 'תל אביב',
-              },
-              hours: 'א׳-ה׳ 9:00-18:00',
-              instructions: 'נא להגיע עם תעודה מזהה',
-            },
-          ]);
-        }
-      } catch (err) {
-        logError('Error fetching pickup locations:', err);
-        // Fallback to manual locations
-        setPickupLocations([
-          {
-            id: 'store-pickup',
-            name: 'איסוף מהחנות',
-            price: '0',
-            address: {
-              line1: 'כתובת החנות',
-              city: 'תל אביב',
-            },
-            hours: 'א׳-ה׳ 9:00-18:00',
-          },
-        ]);
-      } finally {
-        setLoading(false);
-      }
-    }
   }
 
   // Handle pickup location selection
@@ -439,6 +392,7 @@ function CheckoutContent() {
                 <CheckoutForm
                   onSubmit={handleAddressSubmit}
                   loading={loading}
+                  destinations={destinations}
                   initialValues={
                     checkout?.shippingAddress
                       ? {

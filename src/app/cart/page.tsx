@@ -18,7 +18,6 @@ import {
   Percent,
 } from 'lucide-react';
 import { useCart } from '@/providers/store-provider';
-import { useCartStore } from '@/store/cart-store';
 import { getClient } from '@/lib/omni-sync';
 import { formatPrice, logError, getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,19 +27,12 @@ import { Separator } from '@/components/ui/separator';
 export default function CartPage() {
   const router = useRouter();
   const { cart: contextCart, cartLoading, refreshCart } = useCart();
-  const { cart: storeCart, initCart, isLoading: storeLoading, hasHydrated, setCartFromResponse } = useCartStore();
 
-  // Use store cart (supports local cart for guests) or fall back to context cart
-  const cart = storeCart || contextCart;
-  const isServerCart = storeCart?.isServerCart !== false;
+  // Use context cart - it now properly handles both server and local carts
+  const cart = contextCart;
 
-  // Wait for store to hydrate from localStorage before showing content
-  const isHydrating = !hasHydrated;
-
-  // Initialize store cart on mount
-  useEffect(() => {
-    initCart();
-  }, [initCart]);
+  // Check if it's a server cart (has an id property that's not local)
+  const isServerCart = cart && 'id' in cart && cart.id && !String(cart.id).startsWith('local');
 
   const [couponCode, setCouponCode] = useState('');
   const [couponError, setCouponError] = useState('');
@@ -55,23 +47,15 @@ export default function CartPage() {
   const discountAmount = cart?.discountAmount ? parseFloat(cart.discountAmount) : 0;
   const appliedCoupon = cart?.couponCode || null;
 
-  // Update quantity handler
-  async function updateQuantity(itemId: string, quantity: number) {
+  // Update quantity handler - uses productId/variantId like test_store
+  async function updateQuantity(productId: string, variantId: string | undefined, quantity: number) {
     if (quantity < 1) return;
     try {
       setIsLoading(true);
       setError(null);
       const client = getClient();
-      const item = items.find(i => i.id === itemId);
-      if (item) {
-        const updatedCart = await client.smartUpdateCartItem(item.productId, quantity, item.variantId || undefined);
-        // Update store directly with the returned cart
-        setCartFromResponse(updatedCart);
-        // Also refresh context cart for server carts
-        if (isServerCart) {
-          await refreshCart();
-        }
-      }
+      await client.smartUpdateCartItem(productId, quantity, variantId);
+      await refreshCart();
     } catch (err) {
       setError(getErrorMessage(err) || 'שגיאה בעדכון כמות');
     } finally {
@@ -79,22 +63,14 @@ export default function CartPage() {
     }
   }
 
-  // Remove item handler
-  async function removeItem(itemId: string) {
+  // Remove item handler - uses productId/variantId like test_store
+  async function removeItem(productId: string, variantId: string | undefined) {
     try {
       setIsLoading(true);
       setError(null);
       const client = getClient();
-      const item = items.find(i => i.id === itemId);
-      if (item) {
-        const updatedCart = await client.smartRemoveFromCart(item.productId, item.variantId || undefined);
-        // Update store directly with the returned cart
-        setCartFromResponse(updatedCart);
-        // Also refresh context cart for server carts
-        if (isServerCart) {
-          await refreshCart();
-        }
-      }
+      await client.smartRemoveFromCart(productId, variantId);
+      await refreshCart();
     } catch (err) {
       setError(getErrorMessage(err) || 'שגיאה בהסרת פריט');
     } finally {
@@ -159,7 +135,6 @@ export default function CartPage() {
       await client.applyCoupon(cart.id, couponCode.trim());
       setCouponCode('');
       await refreshCart();
-      await initCart();
     } catch (err) {
       setCouponError(getErrorMessage(err) || 'קוד קופון לא תקין');
     } finally {
@@ -174,7 +149,6 @@ export default function CartPage() {
       const client = getClient();
       await client.removeCoupon(cart.id);
       await refreshCart();
-      await initCart();
     } catch (err) {
       logError('Failed to remove coupon:', err);
     }
@@ -197,8 +171,8 @@ export default function CartPage() {
     }
   };
 
-  // Show loading state while carts are being fetched
-  if (isHydrating || storeLoading || cartLoading) {
+  // Show loading state while cart is being fetched
+  if (cartLoading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 pt-20">
         <div className="absolute inset-x-0 top-0 h-20 bg-black z-40" />
@@ -375,7 +349,7 @@ export default function CartPage() {
                       <div className="flex items-center justify-between mt-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            onClick={() => updateQuantity(item.productId, item.variantId || undefined, item.quantity - 1)}
                             disabled={item.quantity <= 1 || isLoading}
                             className="p-1.5 border border-border rounded hover:bg-muted transition-colors disabled:opacity-50"
                           >
@@ -385,7 +359,7 @@ export default function CartPage() {
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.productId, item.variantId || undefined, item.quantity + 1)}
                             disabled={isLoading}
                             className="p-1.5 border border-border rounded hover:bg-muted transition-colors"
                           >
@@ -394,7 +368,7 @@ export default function CartPage() {
                         </div>
 
                         <button
-                          onClick={() => removeItem(item.id)}
+                          onClick={() => removeItem(item.productId, item.variantId || undefined)}
                           disabled={isLoading}
                           className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors"
                         >

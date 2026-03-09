@@ -95,12 +95,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const client = getClient();
       const c = await client.smartGetCart();
 
-      // Only set cart if it's a server cart with an ID
+      // Set cart for both server and local carts
+      setCart(c as Cart);
+
+      // Persist server cart ID if available
       if (c && 'id' in c && c.id) {
-        setCart(c as Cart);
         setCartId(c.id);
-      } else {
-        setCart(null);
       }
     } catch (err) {
       logError('Failed to load cart:', err);

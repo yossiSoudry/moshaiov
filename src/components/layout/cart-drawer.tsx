@@ -12,23 +12,18 @@ import { Button } from '@/components/ui/button';
 import { formatPrice, logError } from '@/lib/utils';
 
 export function CartDrawer() {
-  const { cart: contextCart, refreshCart } = useCart();
-  const { isOpen, toggleCart, cart: storeCart } = useCartStore();
+  const { cart, refreshCart } = useCart();
+  const { isOpen, toggleCart } = useCartStore();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Use store cart (for local carts) or context cart (for server carts)
-  const cart = storeCart || contextCart;
-
   // Update quantity handler using smartUpdateCartItem
-  async function updateQuantity(itemId: string, quantity: number) {
+  async function updateQuantity(productId: string, variantId: string | undefined, quantity: number) {
     if (quantity < 1) return;
-    const item = cart?.items.find(i => i.id === itemId);
-    if (!item) return;
 
     try {
       setIsLoading(true);
       const client = getClient();
-      await client.smartUpdateCartItem(item.product.id, quantity, item.variant?.id);
+      await client.smartUpdateCartItem(productId, quantity, variantId);
       await refreshCart();
     } catch (err) {
       logError('Failed to update quantity:', err);
@@ -38,14 +33,11 @@ export function CartDrawer() {
   }
 
   // Remove item handler using smartRemoveFromCart
-  async function removeItem(itemId: string) {
-    const item = cart?.items.find(i => i.id === itemId);
-    if (!item) return;
-
+  async function removeItem(productId: string, variantId: string | undefined) {
     try {
       setIsLoading(true);
       const client = getClient();
-      await client.smartRemoveFromCart(item.product.id, item.variant?.id);
+      await client.smartRemoveFromCart(productId, variantId);
       await refreshCart();
     } catch (err) {
       logError('Failed to remove item:', err);
@@ -233,7 +225,7 @@ export function CartDrawer() {
                               {/* Quantity controls */}
                               <div className="flex items-center gap-1 bg-background rounded-lg border border-border/50 p-0.5">
                                 <motion.button
-                                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                  onClick={() => updateQuantity(item.productId, item.variantId || undefined, item.quantity - 1)}
                                   disabled={item.quantity <= 1 || isLoading}
                                   className="p-1.5 rounded-md hover:bg-muted transition-colors disabled:opacity-30"
                                   whileHover={{ scale: 1.1 }}
@@ -245,7 +237,7 @@ export function CartDrawer() {
                                   {item.quantity}
                                 </span>
                                 <motion.button
-                                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                  onClick={() => updateQuantity(item.productId, item.variantId || undefined, item.quantity + 1)}
                                   disabled={isLoading}
                                   className="p-1.5 rounded-md hover:bg-muted transition-colors"
                                   whileHover={{ scale: 1.1 }}
@@ -275,7 +267,7 @@ export function CartDrawer() {
 
                           {/* Remove button */}
                           <motion.button
-                            onClick={() => removeItem(item.id)}
+                            onClick={() => removeItem(item.productId, item.variantId || undefined)}
                             disabled={isLoading}
                             className="absolute top-2 left-2 p-1.5 rounded-lg bg-background/80 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
                             whileHover={{ scale: 1.1 }}

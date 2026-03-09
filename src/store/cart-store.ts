@@ -248,7 +248,7 @@ export const useCartStore = create<CartState>()(
             });
           } else if (updatedCart && 'items' in updatedCart) {
             // Local cart (for guests)
-            const localCart = updatedCart as LocalCart;
+            const localCart = updatedCart as unknown as LocalCart;
             console.log('Local cart updated:', localCart);
 
             set({

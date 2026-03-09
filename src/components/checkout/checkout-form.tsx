@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { SetShippingAddressDto } from 'brainerce';
+import type { SetShippingAddressDto, ShippingDestinations } from 'brainerce';
 import { cn } from '@/lib/utils';
 
-// Country options
-const COUNTRIES = [
+// Fallback country options (used when destinations not available from server)
+const FALLBACK_COUNTRIES = [
   { code: 'IL', name: 'ישראל' },
   { code: 'US', name: 'ארצות הברית' },
   { code: 'GB', name: 'בריטניה' },
@@ -13,8 +13,8 @@ const COUNTRIES = [
   { code: 'FR', name: 'צרפת' },
 ];
 
-// Israeli regions/districts
-const ISRAEL_REGIONS = [
+// Fallback Israeli regions/districts
+const FALLBACK_ISRAEL_REGIONS = [
   { code: 'CENTER', name: 'מרכז' },
   { code: 'TEL_AVIV', name: 'תל אביב' },
   { code: 'JERUSALEM', name: 'ירושלים' },
@@ -28,6 +28,7 @@ interface CheckoutFormProps {
   onSubmit: (address: SetShippingAddressDto) => void;
   loading?: boolean;
   initialValues?: Partial<SetShippingAddressDto>;
+  destinations?: ShippingDestinations | null;
   className?: string;
 }
 
@@ -35,8 +36,12 @@ export function CheckoutForm({
   onSubmit,
   loading = false,
   initialValues,
+  destinations,
   className,
 }: CheckoutFormProps) {
+  // Use server destinations if available, otherwise fallback
+  const hasServerDestinations = destinations && destinations.countries.length > 0;
+
   const [formData, setFormData] = useState<SetShippingAddressDto>({
     email: initialValues?.email || '',
     firstName: initialValues?.firstName || '',
@@ -46,7 +51,7 @@ export function CheckoutForm({
     city: initialValues?.city || '',
     region: initialValues?.region || '',
     postalCode: initialValues?.postalCode || '',
-    country: initialValues?.country || 'IL',
+    country: initialValues?.country || (hasServerDestinations ? '' : 'IL'),
     phone: initialValues?.phone || '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -107,13 +112,25 @@ export function CheckoutForm({
   const selectClass =
     'bg-background text-foreground focus:ring-primary/20 focus:border-primary h-10 w-full rounded border px-3 text-sm focus:outline-none focus:ring-2 appearance-none cursor-pointer';
 
-  // Get regions based on selected country
+  // Get countries - use server destinations if available
+  const countries = useMemo(() => {
+    if (hasServerDestinations && destinations?.countries) {
+      return destinations.countries.map(c => ({ code: c.code, name: c.name }));
+    }
+    return FALLBACK_COUNTRIES;
+  }, [hasServerDestinations, destinations]);
+
+  // Get regions based on selected country - use server regions if available
   const regions = useMemo(() => {
+    if (hasServerDestinations && destinations?.regions?.[formData.country]) {
+      return destinations.regions[formData.country].map(r => ({ code: r.code, name: r.name }));
+    }
+    // Fallback for Israel
     if (formData.country === 'IL') {
-      return ISRAEL_REGIONS;
+      return FALLBACK_ISRAEL_REGIONS;
     }
     return [];
-  }, [formData.country]);
+  }, [formData.country, hasServerDestinations, destinations]);
 
   return (
     <form onSubmit={handleSubmit} className={cn('space-y-4', className)} dir="rtl">
@@ -184,7 +201,7 @@ export function CheckoutForm({
               className={cn(selectClass, errors.country ? 'border-destructive' : 'border-border')}
             >
               <option value="">בחר מדינה</option>
-              {COUNTRIES.map((country) => (
+              {countries.map((country) => (
                 <option key={country.code} value={country.code}>
                   {country.name}
                 </option>
