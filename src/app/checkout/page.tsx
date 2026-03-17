@@ -179,10 +179,23 @@ function CheckoutContent() {
   }
 
   // Handle delivery method selection (shipping vs pickup)
-  // Pickup locations are already fetched at init, so just set the method
-  function handleDeliveryMethodSelect(method: 'shipping' | 'pickup') {
-    setDeliveryMethod(method);
-    setError(null);
+  async function handleDeliveryMethodSelect(method: 'shipping' | 'pickup') {
+    if (!checkout) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      setDeliveryMethod(method);
+      const client = getClient();
+
+      // Call API to set delivery type on the checkout
+      await client.setDeliveryType(checkout.id, method);
+    } catch (err) {
+      const message = getErrorMessage(err) || 'שגיאה בבחירת אופן קבלה';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   // Handle pickup location selection
@@ -196,34 +209,15 @@ function CheckoutContent() {
       setLoading(true);
       setError(null);
       const client = getClient();
-      const clientAny = client as unknown as Record<string, unknown>;
 
-      // Try to use SDK method if available
-      if (typeof clientAny.selectPickupLocation === 'function') {
-        const updated = await (clientAny.selectPickupLocation as (
-          checkoutId: string,
-          locationId: string,
-          info: typeof customerInfo
-        ) => Promise<Checkout>)(checkout.id, locationId, customerInfo);
-        setCheckout(updated);
-      } else {
-        // Fallback: set shipping address with pickup location info
-        const location = pickupLocations.find((l) => l.id === locationId);
-        if (location) {
-          const response = await client.setShippingAddress(checkout.id, {
-            email: customerInfo.email,
-            firstName: customerInfo.firstName || '',
-            lastName: customerInfo.lastName || '',
-            line1: location.address.line1,
-            city: location.address.city || '',
-            region: location.address.region || '',
-            postalCode: location.address.postalCode || '',
-            country: location.address.country || 'IL',
-            phone: customerInfo.phone || '',
-          });
-          setCheckout(response.checkout);
-        }
-      }
+      const updated = await client.selectPickupLocation(checkout.id, {
+        pickupRateId: locationId,
+        email: customerInfo.email,
+        firstName: customerInfo.firstName,
+        lastName: customerInfo.lastName,
+        phone: customerInfo.phone,
+      });
+      setCheckout(updated);
       setPickupSelected(true);
     } catch (err) {
       const message = getErrorMessage(err) || 'שגיאה בבחירת נקודת איסוף';
@@ -280,8 +274,88 @@ function CheckoutContent() {
     : (addressSaved && shippingSelected);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8" dir="rtl">
-      <h1 className="text-foreground mb-6 text-2xl font-bold">תשלום</h1>
+    <div className="min-h-screen" dir="rtl">
+      {/* Checkout Header with Branding */}
+      <header className="border-b border-border bg-black/95 backdrop-blur-sm sticky top-0 z-50">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            {/* Back Button */}
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m9 18 6-6-6-6"/>
+              </svg>
+              <span className="hidden sm:inline">חזרה לחנות</span>
+            </Link>
+
+            {/* Logo/Branding */}
+            <Link href="/" className="flex items-center gap-2">
+              <svg
+                viewBox="0 0 40 40"
+                className="h-8 w-8 sm:h-10 sm:w-10"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <defs>
+                  <linearGradient id="checkoutDiamondGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#b8942e" />
+                    <stop offset="50%" stopColor="#e8d9a8" />
+                    <stop offset="100%" stopColor="#b8942e" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M20 4L8 16L20 36L32 16L20 4Z"
+                  stroke="url(#checkoutDiamondGradient)"
+                  strokeWidth="2"
+                  fill="none"
+                />
+                <path
+                  d="M8 16H32"
+                  stroke="url(#checkoutDiamondGradient)"
+                  strokeWidth="2"
+                />
+                <path
+                  d="M20 4L14 16L20 36L26 16L20 4Z"
+                  stroke="rgba(212,175,55,0.3)"
+                  strokeWidth="1"
+                  fill="none"
+                />
+              </svg>
+              <div>
+                <Image
+                  src="/moshayov-text-logo.png"
+                  alt="MOSHAYOV"
+                  width={120}
+                  height={24}
+                  className="h-5 sm:h-6 w-auto object-contain"
+                  priority
+                />
+                <p className="-mt-0.5 text-[9px] sm:text-[10px] tracking-widest text-white/70">
+                  תכשיטי זהב ויהלומים
+                </p>
+              </div>
+            </Link>
+
+            {/* Spacer for centering */}
+            <div className="w-[100px]" />
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <h1 className="text-foreground mb-6 text-2xl font-bold">תשלום</h1>
 
       {/* Canceled payment banner */}
       {canceled && (
@@ -646,6 +720,7 @@ function CheckoutContent() {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
