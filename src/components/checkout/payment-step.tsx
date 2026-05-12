@@ -7,6 +7,27 @@ import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import { cn } from '@/lib/utils';
 import { isAllowedPaymentUrl, safePaymentRedirect } from '@/lib/safe-redirect';
 
+declare global {
+  interface Window {
+    growPayment?: {
+      init: (config: {
+        environment: string;
+        version: number;
+        events: {
+          onSuccess?: (response: unknown) => void;
+          onFailure?: (response: unknown) => void;
+          onError?: (response: unknown) => void;
+          onTimeout?: (response: unknown) => void;
+          onWalletChange?: (state: string) => void;
+          onPaymentStart?: (response: unknown) => void;
+          onPaymentCancel?: (response: unknown) => void;
+        };
+      }) => void;
+      renderPaymentOptions: (authCode: string) => void;
+    };
+  }
+}
+
 const LEGACY_GROW_SDK: PaymentClientSdk = {
   renderType: 'sdk-widget',
   scriptUrl: 'https://cdn.meshulam.co.il/sdk/gs.min.js',

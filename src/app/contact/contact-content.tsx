@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { submitContactInquiry } from '@/lib/omni-sync';
 
 // Diamond SVG component for floating particles
 const DiamondIcon = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
@@ -53,9 +54,18 @@ const contactInfo = [
   },
 ];
 
+const SUBJECT_LABELS: Record<string, string> = {
+  general: 'שאלה כללית',
+  order: 'שאלה על הזמנה',
+  custom: 'הזמנה מיוחדת',
+  repair: 'תיקון/שיפוץ',
+  other: 'אחר',
+};
+
 export function ContactContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -70,8 +80,23 @@ export function ContactContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    setSubmitError(null);
+
+    const result = await submitContactInquiry({
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone || undefined,
+      subject: SUBJECT_LABELS[formData.subject] || formData.subject,
+      message: formData.message,
+    });
+
     setIsSubmitting(false);
+
+    if (!result.success) {
+      setSubmitError(result.error || 'שגיאה בשליחת ההודעה. נסו שוב מאוחר יותר.');
+      return;
+    }
+
     setIsSubmitted(true);
     setTimeout(() => {
       setIsSubmitted(false);
@@ -343,6 +368,12 @@ export function ContactContent() {
                               onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                             />
                           </div>
+
+                          {submitError && (
+                            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                              {submitError}
+                            </div>
+                          )}
 
                           <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                             <Button

@@ -456,6 +456,44 @@ export function getOrderStatusDisplay(status: string): string {
   return statusMap[status] || status;
 }
 
+// ============================================
+// Contact Inquiry
+// ============================================
+
+export interface ContactInquiryInput {
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+}
+
+/**
+ * Submit a contact inquiry to Brainerce store admin.
+ * Rate-limited server-side to 3 requests / 60s per IP.
+ */
+export async function submitContactInquiry(
+  data: ContactInquiryInput
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  try {
+    const res = await getClient().createInquiry({
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      subject: data.subject,
+      message: data.message,
+      locale: 'he',
+      sourceMetadata: typeof window !== 'undefined'
+        ? { page: window.location.pathname, referrer: document.referrer || undefined }
+        : undefined,
+    });
+    return { success: true, id: res.id };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'שגיאה בשליחת ההודעה';
+    return { success: false, error: message };
+  }
+}
+
 /**
  * Get payment status display text in Hebrew
  */
