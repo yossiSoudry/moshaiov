@@ -8,6 +8,7 @@ import { Heart, ShoppingBag, Sparkles, Star } from 'lucide-react';
 import { cn, formatPrice, formatPriceRange } from '@/lib/utils';
 import { useCartStore } from '@/store/cart-store';
 import { useFavoritesStore } from '@/store/favorites-store';
+import { useCart } from '@/providers/store-provider';
 import { useFlyToCart } from '@/components/ui/fly-to-cart';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +38,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
   const [mounted, setMounted] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
   const { addToCart, openCart, isLoading } = useCartStore();
+  const { refreshCart } = useCart();
   const { isFavorite, addToFavorites, removeFromFavorites } = useFavoritesStore();
   const { triggerFly } = useFlyToCart();
 
@@ -111,7 +113,12 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
           startHeight: rect.height,
         });
       }
-      await addToCart(product.id);
+      await addToCart(product.id, undefined, 1, {
+        name: product.name,
+        price: (minSalePrice || 0).toString(),
+        image: product.images?.[0]?.url,
+      });
+      await refreshCart();
       openCart();
     }
   };
@@ -132,12 +139,12 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
   };
 
   const getStockDisplay = () => {
-    const inv = product.inventory as { trackingMode?: string; available?: number; total?: number; inStock?: boolean; canPurchase?: boolean } | undefined;
+    const inv = product.inventory;
     if (!inv || inv.trackingMode === 'DISABLED') {
       return null;
     }
-    // ALWAYS_IN_STOCK or UNLIMITED - always available, no badge needed
-    if (inv.trackingMode === 'ALWAYS_IN_STOCK' || inv.trackingMode === 'UNLIMITED') {
+    // UNLIMITED - always available, no badge needed
+    if (inv.trackingMode === 'UNLIMITED') {
       return null; // Don't show badge for always-in-stock items
     }
     // TRACKED mode

@@ -173,8 +173,8 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
   // Get stock info - check variant inventory if variant is selected
   const getStockDisplay = () => {
     // If variant is selected, use variant inventory
-    const variantInventory = selectedVariant?.inventory as { trackingMode?: string; available?: number; total?: number; inStock?: boolean; canPurchase?: boolean } | undefined;
-    const productInventory = product?.inventory as { trackingMode?: string; available?: number; total?: number; inStock?: boolean; canPurchase?: boolean } | undefined;
+    const variantInventory = selectedVariant?.inventory;
+    const productInventory = product?.inventory;
 
     // Use variant inventory if available, otherwise fall back to product inventory
     const inventory = variantInventory || productInventory;
@@ -183,8 +183,8 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
       return { text: 'לא זמין', inStock: false };
     }
 
-    // ALWAYS_IN_STOCK or UNLIMITED - always show as in stock
-    if (inventory.trackingMode === 'ALWAYS_IN_STOCK' || inventory.trackingMode === 'UNLIMITED') {
+    // UNLIMITED - always show as in stock
+    if (inventory.trackingMode === 'UNLIMITED') {
       return { text: 'במלאי', inStock: true };
     }
 
@@ -409,11 +409,8 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
                   <h3 className="font-medium mb-3">בחר אפשרות:</h3>
                   <div className="flex flex-wrap gap-2">
                     {product.variants.map((variant) => {
-                      const variantInv = variant.inventory as { trackingMode?: string; available?: number; inStock?: boolean; canPurchase?: boolean } | undefined;
-                      const isVariantAvailable = !variantInv ||
-                        variantInv.trackingMode === 'ALWAYS_IN_STOCK' ||
-                        variantInv.trackingMode === 'UNLIMITED' ||
-                        (variantInv.inStock !== false && variantInv.canPurchase !== false && (variantInv.available === undefined || variantInv.available > 0));
+                      const variantInv = variant.inventory;
+                      const isVariantAvailable = !variantInv || variantInv.canPurchase;
 
                       return (
                         <button

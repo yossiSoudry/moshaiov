@@ -25,9 +25,14 @@ import {
   type OrderItem,
   type Customer,
   type CustomerAddress,
+  type CustomerProfile,
   type ShippingRate,
   type InventoryInfo,
   type Coupon,
+  type StoreInfo,
+  type PickupLocation,
+  type ShippingDestinations,
+  type ProductMetafield,
 } from 'brainerce';
 
 const CONNECTION_ID = process.env.NEXT_PUBLIC_BRAINERCE_CONNECTION_ID || 'vc_LtawnwQr1w5F5Tqi1wYOG';
@@ -41,6 +46,13 @@ export function getClient(): BrainerceClient {
     clientInstance = new BrainerceClient({
       connectionId: CONNECTION_ID,
       baseUrl: API_URL,
+      onAuthError: () => {
+        // Token expired or invalid - clear stored auth
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(CART_ID_KEY);
+        }
+      },
     });
   }
   return clientInstance;
@@ -154,9 +166,14 @@ export type {
   OrderItem,
   Customer,
   CustomerAddress,
+  CustomerProfile,
   ShippingRate,
   InventoryInfo,
   Coupon,
+  StoreInfo,
+  PickupLocation,
+  ShippingDestinations,
+  ProductMetafield,
 };
 
 // ============================================
@@ -195,10 +212,19 @@ export function isOnSale(product: Product): boolean {
 
 /**
  * Check if product is in stock based on inventory info
+ * Uses the pre-calculated inStock field from the SDK (handles TRACKED/UNLIMITED/DISABLED modes)
  */
 export function isInStock(inventory: InventoryInfo | undefined): boolean {
   if (!inventory) return true; // Assume available if no inventory info
-  return (inventory.available ?? 0) > 0;
+  return inventory.inStock;
+}
+
+/**
+ * Check if product can be purchased (considers tracking mode and stock)
+ */
+export function canPurchase(inventory: InventoryInfo | undefined): boolean {
+  if (!inventory) return true;
+  return inventory.canPurchase;
 }
 
 /**
