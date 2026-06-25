@@ -24,6 +24,20 @@ function CheckoutSuccessContent() {
   const [orderId, setOrderId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.top && window.top !== window.self) {
+      try {
+        window.top.location.href = window.location.href;
+        return;
+      } catch {
+        window.parent.postMessage(
+          { type: 'brainerce:payment-complete', data: { checkoutId } },
+          window.location.origin
+        );
+      }
+    }
+  }, [checkoutId]);
+
+  useEffect(() => {
     async function processOrderCompletion() {
       // If demo mode, just show success
       if (isDemo) {

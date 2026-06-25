@@ -405,7 +405,7 @@ export function ContactContent() {
                           </motion.div>
 
                           <p className="text-xs text-center text-white/30">
-                            בלחיצה על "שלח הודעה" אתם מסכימים ל
+                            בלחיצה על ״שלח הודעה״ אתם מסכימים ל
                             <a href="/privacy" className="text-[#b8942e] hover:text-[#e8d9a8] transition-colors mx-1">
                               מדיניות הפרטיות
                             </a>

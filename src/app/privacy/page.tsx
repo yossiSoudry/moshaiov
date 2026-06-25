@@ -145,9 +145,9 @@ export default function PrivacyPage() {
             {/* Introduction */}
             <div className="bg-white rounded-2xl p-8 shadow-lg shadow-black/5 border border-gray-100">
               <p className="text-gray-600 leading-relaxed text-lg">
-                מדיניות פרטיות זו מתארת כיצד מושיוב ("אנחנו", "שלנו") אוספת, משתמשת ומגנה על המידע האישי
+                מדיניות פרטיות זו מתארת כיצד מושיוב (״אנחנו״, ״שלנו״) אוספת, משתמשת ומגנה על המידע האישי
                 שלכם בעת שימוש באתר שלנו. אנו מחויבים להגנה על פרטיותכם ופועלים בהתאם לחוק הגנת הפרטיות,
-                התשמ"א-1981 ותקנות הגנת הפרטיות.
+                התשמ״א-1981 ותקנות הגנת הפרטיות.
               </p>
             </div>
 

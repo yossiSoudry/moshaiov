@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, type CSSProperties } from 'react';
 import type { PaymentIntent, PaymentClientSdk } from 'brainerce';
+import { Lock } from 'lucide-react';
 import { getClient } from '@/lib/omni-sync';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,15 @@ declare global {
       renderPaymentOptions: (authCode: string) => void;
     };
   }
+}
+
+/** A payment SDK exposes dynamically-named methods (init/render/etc.) on window. */
+type PaymentSdkGlobal = Record<string, (arg?: unknown) => void>;
+
+/** Read a dynamically-named payment SDK object off `window` in a typed way. */
+function getPaymentGlobal(name: string | undefined): PaymentSdkGlobal | undefined {
+  if (!name) return undefined;
+  return (window as unknown as Record<string, PaymentSdkGlobal | undefined>)[name];
 }
 
 const LEGACY_GROW_SDK: PaymentClientSdk = {
@@ -193,14 +203,14 @@ export function PaymentStep({ checkoutId, className }: PaymentStepProps) {
         }
       }
 
-      if ((window as any)[sdk.globalName]) {
+      if (getPaymentGlobal(sdk.globalName)) {
         initSdk(sdk);
         return;
       }
 
       if (document.querySelector(`script[src="${sdk.scriptUrl}"]`)) {
         const waitId = setInterval(() => {
-          if ((window as any)[sdk.globalName!]) {
+          if (getPaymentGlobal(sdk.globalName)) {
             clearInterval(waitId);
             initSdk(sdk);
           }
@@ -226,7 +236,7 @@ export function PaymentStep({ checkoutId, className }: PaymentStepProps) {
     function initSdk(sdk: PaymentClientSdk) {
       if (sdkInitDone) return;
 
-      const global = (window as any)[sdk.globalName!];
+      const global = getPaymentGlobal(sdk.globalName);
       if (!global) {
         setError('נכשל בטעינת מערכת התשלום');
         return;
@@ -254,7 +264,7 @@ export function PaymentStep({ checkoutId, className }: PaymentStepProps) {
     const MAX_RENDER_ATTEMPTS = 4;
 
     function renderPayment(sdk: PaymentClientSdk, intent: PaymentIntent) {
-      const global = (window as any)[sdk.globalName!];
+      const global = getPaymentGlobal(sdk.globalName);
       if (!global || walletOpenRef.current) return;
 
       const renderMethod = sdk.renderMethod || 'renderPaymentOptions';
@@ -409,7 +419,7 @@ export function PaymentStep({ checkoutId, className }: PaymentStepProps) {
       }
 
       if (sdk.initConfig?.environment && currentSdk) {
-        const global = (window as any)[sdk.globalName];
+        const global = getPaymentGlobal(sdk.globalName);
         if (global) {
           const method = sdk.initMethod || 'init';
           global[method]({
@@ -548,59 +558,31 @@ export function PaymentStep({ checkoutId, className }: PaymentStepProps) {
     })();
     const isBrainerceEmbed = iframeUrlObj?.pathname.includes('/embed/') ?? false;
 
-    if (isBrainerceEmbed) {
-      const hasMeasured = embeddedIframeHeight !== null;
-      const iframeStyle: CSSProperties = {
-        height: hasMeasured ? (embeddedIframeHeight as number) : 540,
-        transition: hasMeasured ? 'height 0.2s ease-out' : undefined,
-      };
-      return (
-        <div className={cn('w-full', className)}>
+    const hasMeasured = embeddedIframeHeight !== null;
+    const iframeStyle: CSSProperties = isBrainerceEmbed
+      ? {
+          height: hasMeasured ? (embeddedIframeHeight as number) : 540,
+          transition: hasMeasured ? 'height 0.2s ease-out' : undefined,
+        }
+      : { height: 720, minHeight: 600 };
+
+    return (
+      <div className={cn('w-full', className)} dir="rtl">
+        <div className="border-border bg-card relative w-full overflow-hidden rounded-2xl border shadow-sm">
+          <div className="border-border bg-muted/30 flex items-center gap-2 border-b px-5 py-3">
+            <Lock className="h-4 w-4 text-emerald-600" />
+            <span className="text-foreground text-sm font-medium">תשלום מאובטח</span>
+            <span className="text-muted-foreground mr-auto text-xs">מוצפן SSL</span>
+          </div>
           <iframe
             src={paymentIntent.clientSecret}
-            className="block w-full border-0"
+            className="block w-full border-0 bg-white"
             style={iframeStyle}
             title="תשלום"
             allow="payment"
           />
         </div>
-      );
-    }
-
-    // Provider-hosted page (morning, cardcom etc.) — modal overlay
-    const iframeStyle: CSSProperties = { height: '90vh', minHeight: 700 };
-    return (
-      <>
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 py-6 backdrop-blur-sm">
-          <div className="bg-background relative mx-4 flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl shadow-2xl">
-            <div className="border-border flex items-center justify-between gap-4 border-b px-5 py-4">
-              <span className="text-foreground text-sm font-semibold">תשלום מאובטח</span>
-              <button
-                onClick={() => {
-                  window.location.href = `/checkout?checkout_id=${checkoutId}&canceled=true`;
-                }}
-                className="text-muted-foreground hover:bg-secondary hover:text-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors"
-                aria-label="סגור"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M1 1l12 12M13 1L1 13" />
-                </svg>
-              </button>
-            </div>
-            <iframe
-              src={paymentIntent.clientSecret}
-              className="w-full border-0"
-              style={iframeStyle}
-              title="תשלום"
-              allow="payment"
-            />
-          </div>
-        </div>
-        <div className={cn('flex flex-col items-center justify-center py-12', className)}>
-          <LoadingSpinner size="lg" />
-          <p className="text-muted-foreground mt-4 text-sm">מכין את התשלום...</p>
-        </div>
-      </>
+      </div>
     );
   }
 

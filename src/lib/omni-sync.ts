@@ -35,7 +35,10 @@ import {
   type ProductMetafield,
 } from 'brainerce';
 
-const CONNECTION_ID = process.env.NEXT_PUBLIC_BRAINERCE_CONNECTION_ID || 'vc_LtawnwQr1w5F5Tqi1wYOG';
+const SALES_CHANNEL_ID =
+  process.env.NEXT_PUBLIC_BRAINERCE_SALES_CHANNEL_ID ||
+  process.env.NEXT_PUBLIC_BRAINERCE_CONNECTION_ID ||
+  'vc_LtawnwQr1w5F5Tqi1wYOG';
 const API_URL = process.env.NEXT_PUBLIC_BRAINERCE_API_URL || 'https://api.brainerce.com';
 
 // Singleton SDK client
@@ -44,7 +47,7 @@ let clientInstance: BrainerceClient | null = null;
 export function getClient(): BrainerceClient {
   if (!clientInstance) {
     clientInstance = new BrainerceClient({
-      connectionId: CONNECTION_ID,
+      salesChannelId: SALES_CHANNEL_ID,
       baseUrl: API_URL,
       onAuthError: () => {
         // Token expired or invalid - clear stored auth

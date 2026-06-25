@@ -37,8 +37,8 @@ export default function AccessibilityPage() {
           <p className="text-muted-foreground leading-relaxed">
             אתר מושיוב מחויב להנגשת האתר לאנשים עם מוגבלויות, ומשקיע משאבים רבים
             על מנת להבטיח שהשירותים והתכנים יהיו נגישים לכל אדם. אנו פועלים
-            בהתאם לחוק שוויון זכויות לאנשים עם מוגבלות, התשנ"ח-1998, ולתקנות שוויון
-            זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות), התשע"ג-2013.
+            בהתאם לחוק שוויון זכויות לאנשים עם מוגבלות, התשנ״ח-1998, ולתקנות שוויון
+            זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות), התשע״ג-2013.
           </p>
         </section>
 
@@ -49,7 +49,7 @@ export default function AccessibilityPage() {
             <p className="leading-relaxed">
               האתר עומד בדרישות{' '}
               <strong className="text-foreground">תקנות שוויון זכויות לאנשים עם מוגבלות</strong>{' '}
-              (התאמות נגישות לשירות), התשע"ג-2013 ועומד בהנחיות{' '}
+              (התאמות נגישות לשירות), התשע״ג-2013 ועומד בהנחיות{' '}
               <strong className="text-foreground">WCAG 2.0</strong> ברמת{' '}
               <strong className="text-foreground">AA</strong> בהתאם ל
               <strong className="text-foreground">תקן ישראלי 5568</strong>.
@@ -220,7 +220,7 @@ export default function AccessibilityPage() {
               </a>
             </p>
             <p>
-              <strong className="text-foreground">דוא"ל:</strong>{' '}
+              <strong className="text-foreground">דוא״ל:</strong>{' '}
               <a
                 href="mailto:info@moshayov.co.il"
                 className="text-gold-500 hover:underline"

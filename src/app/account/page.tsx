@@ -193,7 +193,7 @@ export default function AccountPage() {
                       <div className="text-left">
                         <OrderStatusBadge status={order.status} />
                         <p className="text-sm font-medium mt-1">
-                          {formatPrice((order as { totals?: { total?: number } }).totals?.total || (order as { total?: number }).total || 0)}
+                          {formatPrice(order.totalAmount || order.total || 0)}
                         </p>
                       </div>
                     </div>
@@ -210,14 +210,15 @@ export default function AccountPage() {
 
 function OrderStatusBadge({ status }: { status: string }) {
   const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'success' | 'destructive' }> = {
-    PENDING: { label: 'ממתין', variant: 'secondary' },
-    PROCESSING: { label: 'בטיפול', variant: 'default' },
-    SHIPPED: { label: 'נשלח', variant: 'default' },
-    DELIVERED: { label: 'נמסר', variant: 'success' },
-    CANCELLED: { label: 'בוטל', variant: 'destructive' },
+    pending: { label: 'ממתין', variant: 'secondary' },
+    processing: { label: 'בטיפול', variant: 'default' },
+    shipped: { label: 'נשלח', variant: 'default' },
+    delivered: { label: 'נמסר', variant: 'success' },
+    cancelled: { label: 'בוטל', variant: 'destructive' },
+    refunded: { label: 'הוחזר', variant: 'destructive' },
   };
 
-  const { label, variant } = statusMap[status] || { label: status, variant: 'secondary' as const };
+  const { label, variant } = statusMap[(status || '').toLowerCase()] || { label: status, variant: 'secondary' as const };
 
   return <Badge variant={variant}>{label}</Badge>;
 }

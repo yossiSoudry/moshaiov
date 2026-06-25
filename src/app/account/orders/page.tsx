@@ -14,7 +14,9 @@ import {
   Search,
   Calendar,
   Eye,
+  Printer,
 } from 'lucide-react';
+import { printOrderReceipt } from '@/lib/print-receipt';
 import { useAuthStore } from '@/store/auth-store';
 import { omni } from '@/lib/omni-sync';
 import { formatPrice } from '@/lib/utils';
@@ -195,12 +197,20 @@ export default function OrdersPage() {
                           <div>
                             <p className="text-sm text-muted-foreground">סכום</p>
                             <p className="font-semibold">
-                              {formatPrice((order as { totals?: { total?: number } }).totals?.total || (order as { total?: number }).total || 0)}
+                              {formatPrice(order.totalAmount || order.total || 0)}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <OrderStatusBadge status={order.status} />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => printOrderReceipt(order)}
+                          >
+                            <Printer className="h-4 w-4 me-1" />
+                            קבלה
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -225,53 +235,53 @@ export default function OrdersPage() {
                           <h4 className="font-semibold mb-3">פריטים בהזמנה</h4>
                           <div className="space-y-3">
                             {(order.items || []).map((item, itemIndex) => {
-                              const itemData = item as unknown as { id?: string; productName?: string; name?: string; imageUrl?: string; variantName?: string; quantity: number; unitPrice?: number; price?: number };
+                              const lineTotal =
+                                parseFloat(item.totalPrice || '') ||
+                                parseFloat(item.price || item.unitPrice || '0') * item.quantity;
                               return (
-                              <div
-                                key={itemData.id || itemIndex}
-                                className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg"
-                              >
-                                {itemData.imageUrl && (
-                                  <img
-                                    src={itemData.imageUrl}
-                                    alt={itemData.productName || itemData.name || ''}
-                                    className="w-16 h-16 object-cover rounded"
-                                  />
-                                )}
-                                <div className="flex-1">
-                                  <p className="font-medium">{itemData.productName || itemData.name}</p>
-                                  {itemData.variantName && (
-                                    <p className="text-sm text-muted-foreground">
-                                      {itemData.variantName}
-                                    </p>
+                                <div
+                                  key={`${item.productId}-${itemIndex}`}
+                                  className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg"
+                                >
+                                  {item.image && (
+                                    <img
+                                      src={item.image}
+                                      alt={item.name || ''}
+                                      className="w-16 h-16 object-cover rounded"
+                                    />
                                   )}
-                                  <p className="text-sm text-muted-foreground">
-                                    כמות: {itemData.quantity}
-                                  </p>
+                                  <div className="flex-1">
+                                    <p className="font-medium">{item.name}</p>
+                                    {item.sku && (
+                                      <p className="text-sm text-muted-foreground">{item.sku}</p>
+                                    )}
+                                    <p className="text-sm text-muted-foreground">
+                                      כמות: {item.quantity}
+                                    </p>
+                                  </div>
+                                  <p className="font-semibold">{formatPrice(lineTotal)}</p>
                                 </div>
-                                <p className="font-semibold">
-                                  {formatPrice((itemData.unitPrice || itemData.price || 0) * itemData.quantity)}
-                                </p>
-                              </div>
-                            )})}
+                              );
+                            })}
                           </div>
 
                           {/* Shipping address */}
-                          {(() => {
-                            const addr = (order as { shippingAddress?: { firstName?: string; lastName?: string; address1?: string; line1?: string; city?: string } }).shippingAddress;
-                            return addr && (
-                              <div className="mt-4 pt-4 border-t border-border">
-                                <h4 className="font-semibold mb-2">כתובת למשלוח</h4>
-                                <p className="text-muted-foreground">
-                                  {addr.firstName} {addr.lastName}
-                                  <br />
-                                  {addr.address1 || addr.line1}
-                                  <br />
-                                  {addr.city}
-                                </p>
-                              </div>
-                            );
-                          })()}
+                          {order.shippingAddress && (
+                            <div className="mt-4 pt-4 border-t border-border">
+                              <h4 className="font-semibold mb-2">כתובת למשלוח</h4>
+                              <p className="text-muted-foreground">
+                                {order.shippingAddress.firstName} {order.shippingAddress.lastName}
+                                <br />
+                                {order.shippingAddress.line1}
+                                {order.shippingAddress.line2 ? `, ${order.shippingAddress.line2}` : ''}
+                                <br />
+                                {order.shippingAddress.city}
+                                {order.shippingAddress.postalCode
+                                  ? `, ${order.shippingAddress.postalCode}`
+                                  : ''}
+                              </p>
+                            </div>
+                          )}
                         </motion.div>
                       )}
                     </motion.div>
@@ -302,17 +312,15 @@ function OrderStatusBadge({ status }: { status: string }) {
     string,
     { label: string; variant: 'default' | 'secondary' | 'success' | 'destructive' }
   > = {
-    PENDING: { label: 'ממתין לאישור', variant: 'secondary' },
-    CONFIRMED: { label: 'אושר', variant: 'default' },
-    PROCESSING: { label: 'בטיפול', variant: 'default' },
-    SHIPPED: { label: 'נשלח', variant: 'default' },
-    OUT_FOR_DELIVERY: { label: 'בדרך אליך', variant: 'default' },
-    DELIVERED: { label: 'נמסר', variant: 'success' },
-    CANCELLED: { label: 'בוטל', variant: 'destructive' },
-    REFUNDED: { label: 'הוחזר', variant: 'destructive' },
+    pending: { label: 'ממתין לאישור', variant: 'secondary' },
+    processing: { label: 'בטיפול', variant: 'default' },
+    shipped: { label: 'נשלח', variant: 'default' },
+    delivered: { label: 'נמסר', variant: 'success' },
+    cancelled: { label: 'בוטל', variant: 'destructive' },
+    refunded: { label: 'הוחזר', variant: 'destructive' },
   };
 
-  const { label, variant } = statusMap[status] || {
+  const { label, variant } = statusMap[(status || '').toLowerCase()] || {
     label: status,
     variant: 'secondary' as const,
   };

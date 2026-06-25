@@ -1,4 +1,10 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any --
+   Vendored react-three-fiber / rapier "lanyard" demo. The physics-body refs use
+   `any` because rapier's joint hooks require a non-null `RefObject<RapierRigidBody>`
+   (React 19 makes `useRef<T>(null)` nullable) and the code attaches a custom
+   `lerped` field to the body — properly typing both needs casts uglier than `any`.
+   The three.js pointer events are part of the same demo. */
 import * as THREE from "three";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Canvas, extend, useThree, useFrame } from "@react-three/fiber";
