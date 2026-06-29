@@ -6,7 +6,8 @@ import type { CartItem as CartItemType } from 'brainerce';
 import { getCartItemName, getCartItemImage } from 'brainerce';
 import { getClient } from '@/lib/omni-sync';
 import { useStoreInfo } from '@/providers/store-provider';
-import { formatPrice, cn, logError } from '@/lib/utils';
+import { formatPrice, cn, logError, getCustomizationEntries, swatchColor } from '@/lib/utils';
+import { useCustomizationLabels } from '@/lib/use-customization-labels';
 import { Loader2 } from 'lucide-react';
 
 interface CartItemProps {
@@ -23,6 +24,9 @@ export function CartItem({ item, onUpdate, className }: CartItemProps) {
   const name = getCartItemName(item);
   const imageUrl = getCartItemImage(item);
   const variantName = item.variant?.name;
+  const customizationLabels = useCustomizationLabels(
+    item.metadata && Object.keys(item.metadata).length > 0 ? [item.productId] : []
+  );
   const unitPrice = parseFloat(item.unitPrice);
   const lineTotal = unitPrice * item.quantity;
 
@@ -88,6 +92,20 @@ export function CartItem({ item, onUpdate, className }: CartItemProps) {
 
         {/* Variant name */}
         {variantName && <p className="text-muted-foreground mt-1 text-xs">{variantName}</p>}
+
+        {/* Buyer-chosen options (color, size, …) */}
+        {getCustomizationEntries(item.metadata, customizationLabels).map((c) => (
+          <p key={c.key} className="text-muted-foreground mt-1 text-xs flex items-center gap-1">
+            {c.label && <span>{c.label}:</span>}
+            {c.isColor && (
+              <span
+                className="inline-block h-3 w-3 rounded-full border border-black/15"
+                style={{ background: swatchColor(c.value) }}
+              />
+            )}
+            <span className="text-foreground/80 font-medium">{c.value}</span>
+          </p>
+        ))}
 
         {/* Unit price */}
         <p className="text-muted-foreground mt-1 text-sm">

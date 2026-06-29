@@ -50,7 +50,7 @@ interface CartState {
   setHasHydrated: (state: boolean) => void;
   setCartFromResponse: (cartResponse: Cart | LocalCart | null) => void;
   initCart: () => Promise<void>;
-  addToCart: (productId: string, variantId?: string, quantity?: number, productInfo?: { name: string; price: string; image?: string }) => Promise<void>;
+  addToCart: (productId: string, variantId?: string, quantity?: number, productInfo?: { name: string; price: string; image?: string }, metadata?: Record<string, unknown>) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   applyCoupon: (code: string) => Promise<void>;
@@ -203,8 +203,8 @@ export const useCartStore = create<CartState>()(
       },
 
       // Add item to cart
-      addToCart: async (productId: string, variantId?: string, quantity: number = 1, productInfo?: { name: string; price: string; image?: string }) => {
-        console.log('addToCart called:', { productId, variantId, quantity, productInfo });
+      addToCart: async (productId: string, variantId?: string, quantity: number = 1, productInfo?: { name: string; price: string; image?: string }, metadata?: Record<string, unknown>) => {
+        console.log('addToCart called:', { productId, variantId, quantity, productInfo, metadata });
         console.log('isLoggedIn:', isLoggedIn());
         console.log('stored cartId:', getCartId());
         set({ isLoading: true, error: null });
@@ -219,6 +219,8 @@ export const useCartStore = create<CartState>()(
             productId,
             variantId,
             quantity,
+            // Buyer-entered customization field values (keyed by field.key)
+            ...(metadata && Object.keys(metadata).length > 0 && { metadata }),
             // For local cart, include product details
             ...(productInfo && {
               name: productInfo.name,

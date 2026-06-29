@@ -9,6 +9,7 @@ import { FlyToCartProvider } from "@/components/ui/fly-to-cart";
 import { CookieConsent } from "@/components/ui/cookie-consent";
 import { GlobalErrorHandler } from "@/components/providers/error-boundary";
 import { AccessibilityWidget } from "@/components/accessibility/accessibility-widget";
+import { BrainerceBotWidget } from "@/components/brainerce-bot";
 
 const heebo = Heebo({
   variable: "--font-heebo",
@@ -205,6 +206,7 @@ export default function RootLayout({
               <Footer />
               <CookieConsent />
               <AccessibilityWidget />
+              <BrainerceBotWidget />
             </FlyToCartProvider>
           </StoreProvider>
         </GlobalErrorHandler>

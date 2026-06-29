@@ -7,7 +7,8 @@ import Link from 'next/link';
 import type { Checkout, ShippingRate, SetShippingAddressDto, ShippingDestinations, PickupLocation } from 'brainerce';
 import { getClient, clearCartId } from '@/lib/omni-sync';
 import { useCart, useAuth } from '@/providers/store-provider';
-import { formatPrice, cn, logError, getErrorMessage } from '@/lib/utils';
+import { formatPrice, cn, logError, getErrorMessage, getCustomizationEntries, swatchColor } from '@/lib/utils';
+import { useCustomizationLabels } from '@/lib/use-customization-labels';
 import { CheckoutForm } from '@/components/checkout/checkout-form';
 import { ShippingStep } from '@/components/checkout/shipping-step';
 import { PaymentStep } from '@/components/checkout/payment-step';
@@ -226,6 +227,13 @@ function CheckoutContent() {
       setLoading(false);
     }
   }
+
+  // Resolve customization field keys (e.g. "custom_field_123") to display names
+  const customizationLabels = useCustomizationLabels(
+    (checkout?.lineItems ?? [])
+      .filter((i) => i.metadata && Object.keys(i.metadata).length > 0)
+      .map((i) => i.productId)
+  );
 
   if (initializing) {
     return (
@@ -651,6 +659,21 @@ function CheckoutContent() {
 
                       <div className="min-w-0 flex-1">
                         <p className="text-foreground truncate text-sm">{name}</p>
+                        {getCustomizationEntries(item.metadata, customizationLabels).map((c) => (
+                          <p
+                            key={c.key}
+                            className="text-muted-foreground text-xs flex items-center gap-1"
+                          >
+                            {c.label && <span>{c.label}:</span>}
+                            {c.isColor && (
+                              <span
+                                className="inline-block h-2.5 w-2.5 rounded-full border border-black/15"
+                                style={{ background: swatchColor(c.value) }}
+                              />
+                            )}
+                            <span className="text-foreground/80 font-medium">{c.value}</span>
+                          </p>
+                        ))}
                         <p className="text-muted-foreground text-xs">כמות: {item.quantity}</p>
                       </div>
 

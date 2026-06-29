@@ -115,7 +115,7 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
           : "none",
         width: visible ? "60%" : "100%",
         y: visible ? 20 : 0,
-        backgroundColor: visible ? "rgba(0, 0, 0, 0.8)" : "transparent",
+        backgroundColor: visible ? "rgba(0, 0, 0, 0.8)" : "rgba(0, 0, 0, 0)",
       }}
       transition={{
         type: "spring",
@@ -207,7 +207,7 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
         paddingLeft: visible ? "12px" : "0px",
         borderRadius: visible ? "9999px" : "0px",
         y: visible ? 20 : 0,
-        backgroundColor: visible ? "rgba(0, 0, 0, 0.8)" : "transparent",
+        backgroundColor: visible ? "rgba(0, 0, 0, 0.8)" : "rgba(0, 0, 0, 0)",
       }}
       transition={{
         type: "spring",

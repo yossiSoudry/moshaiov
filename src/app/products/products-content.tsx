@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
+import { Suspense, useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -29,19 +29,42 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/animate-ui/components/animate/tabs';
-import type { Product } from 'brainerce';
+import { MetafieldFilter } from '@/components/products/metafield-filter';
+import {
+  getFilterableMetafieldDefinitions,
+  getCategoryTree,
+  type FacetDefinition,
+} from '@/lib/omni-sync';
+import type { Product, CategoryNode } from 'brainerce';
 
 const PRODUCTS_PER_PAGE = 50;
 
-// Category slug to Hebrew name mapping
-const CATEGORY_MAP: Record<string, string> = {
-  rings: 'טבעות',
-  necklaces: 'שרשראות',
-  earrings: 'עגילים',
-  bracelets: 'צמידים',
-  pendants: 'תליונים',
-  watches: 'שעונים',
-};
+// Flattened lookups derived from the category tree.
+interface CategoryIndex {
+  byId: Map<string, CategoryNode>;
+  parentOf: Map<string, string | null>;
+}
+
+function buildCategoryIndex(tree: CategoryNode[]): CategoryIndex {
+  const byId = new Map<string, CategoryNode>();
+  const parentOf = new Map<string, string | null>();
+  const walk = (nodes: CategoryNode[], parentId: string | null) => {
+    for (const node of nodes) {
+      byId.set(node.id, node);
+      parentOf.set(node.id, parentId);
+      if (node.children?.length) walk(node.children, node.id);
+    }
+  };
+  walk(tree, null);
+  return { byId, parentOf };
+}
+
+// All ids in a category's subtree (the node itself + every descendant).
+function collectDescendantIds(node: CategoryNode): string[] {
+  const ids = [node.id];
+  for (const child of node.children ?? []) ids.push(...collectDescendantIds(child));
+  return ids;
+}
 
 function ProductsContentInner() {
   const searchParams = useSearchParams();
@@ -53,7 +76,14 @@ function ProductsContentInner() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState(initialSearch);
-  const [category, setCategory] = useState(initialCategory);
+  // Real category tree from Brainerce; `category` holds the selected category id
+  // (empty = all). The URL param is resolved against the tree once it loads.
+  const [categories, setCategories] = useState<CategoryNode[]>([]);
+  const [category, setCategory] = useState('');
+  // Filterable custom-field (metafield) facets and the buyer's selections,
+  // keyed by metafield definition key → selected values.
+  const [facets, setFacets] = useState<FacetDefinition[]>([]);
+  const [metafieldFilters, setMetafieldFilters] = useState<Record<string, string[]>>({});
   const [sortBy, setSortBy] = useState('newest');
   const [gridCols, setGridCols] = useState<2 | 3 | 4>(3);
   const [currentPage, setCurrentPage] = useState(1);
@@ -110,6 +140,56 @@ function ProductsContentInner() {
     fetchProducts(1, true);
   }, [fetchProducts]);
 
+  // Load filterable custom-field facets (cached after first load)
+  useEffect(() => {
+    getFilterableMetafieldDefinitions().then(setFacets).catch(() => {});
+  }, []);
+
+  // Load the real category tree (cached after first load) and resolve the
+  // initial ?category= URL param against it. The param accepts a category id or
+  // a name (case-insensitive); legacy slugs that match nothing simply leave the
+  // catalog unfiltered.
+  useEffect(() => {
+    getCategoryTree()
+      .then((tree) => {
+        setCategories(tree);
+        if (!initialCategory || tree.length === 0) return;
+        const { byId } = buildCategoryIndex(tree);
+        if (byId.has(initialCategory)) {
+          setCategory(initialCategory);
+          return;
+        }
+        const match = Array.from(byId.values()).find(
+          (node) => node.name.toLowerCase() === initialCategory.toLowerCase()
+        );
+        if (match) setCategory(match.id);
+      })
+      .catch(() => {});
+  }, [initialCategory]);
+
+  // Flattened category lookups
+  const categoryIndex = useMemo(() => buildCategoryIndex(categories), [categories]);
+
+  // The selected node, its subtree ids (for filtering), and the active top-level
+  // ancestor (for showing the right subcategory row).
+  const selectedNode = category ? categoryIndex.byId.get(category) : undefined;
+  const selectedSubtreeIds = useMemo(
+    () => (selectedNode ? new Set(collectDescendantIds(selectedNode)) : null),
+    [selectedNode]
+  );
+  const activeTopLevelId = useMemo(() => {
+    let id: string | undefined = category || undefined;
+    while (id && categoryIndex.parentOf.get(id)) {
+      id = categoryIndex.parentOf.get(id) as string;
+    }
+    return id;
+  }, [category, categoryIndex]);
+  const activeTopLevelNode = activeTopLevelId
+    ? categoryIndex.byId.get(activeTopLevelId)
+    : undefined;
+  const subcategories = activeTopLevelNode?.children ?? [];
+  const categoryName = selectedNode?.name ?? '';
+
   // Load more products when scrolling near bottom
   const loadMore = useCallback(() => {
     if (!isLoadingMore && hasMore && !isLoading) {
@@ -146,6 +226,13 @@ function ProductsContentInner() {
     }
   };
 
+  const removeMetafieldValue = (key: string, value: string) => {
+    setMetafieldFilters((prev) => ({
+      ...prev,
+      [key]: (prev[key] || []).filter((v) => v !== value),
+    }));
+  };
+
   // Filter by search (client-side)
   const searchFilteredProducts = search
     ? allProducts.filter((product) => {
@@ -156,20 +243,37 @@ function ProductsContentInner() {
       })
     : allProducts;
 
-  // Filter by category (client-side)
-  const filteredProducts = category
+  // Filter by category (client-side). Selecting a parent category includes
+  // products in any of its subcategories (matches the whole subtree).
+  const filteredProducts = selectedSubtreeIds
     ? searchFilteredProducts.filter((product) => {
-        const productCategories = product.categories as unknown as { name?: string; slug?: string }[] | undefined;
+        const productCategories = product.categories as
+          | { id?: string }[]
+          | undefined;
         if (!productCategories) return false;
-        const categoryName = CATEGORY_MAP[category];
-        return productCategories.some(
-          (cat) => cat.name === categoryName || cat.slug === category
-        );
+        return productCategories.some((cat) => cat.id && selectedSubtreeIds.has(cat.id));
       })
     : searchFilteredProducts;
 
+  // Filter by custom-field facets (client-side). OR within a facet, AND across.
+  const activeFacetKeys = Object.keys(metafieldFilters).filter(
+    (key) => metafieldFilters[key]?.length
+  );
+  const metafieldFilteredProducts = activeFacetKeys.length
+    ? filteredProducts.filter((product) => {
+        const metafields =
+          (product as unknown as { metafields?: { definitionKey: string; value: string }[] })
+            .metafields || [];
+        return activeFacetKeys.every((key) =>
+          metafields.some(
+            (m) => m.definitionKey === key && metafieldFilters[key].includes(m.value)
+          )
+        );
+      })
+    : filteredProducts;
+
   // Sort products
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
+  const sortedProducts = [...metafieldFilteredProducts].sort((a, b) => {
     const aWithPrice = a as unknown as { basePrice?: number; salePrice?: number | null };
     const bWithPrice = b as unknown as { basePrice?: number; salePrice?: number | null };
     const aPrice = aWithPrice.salePrice ?? aWithPrice.basePrice ?? 0;
@@ -196,50 +300,103 @@ function ProductsContentInner() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            {/* Category Tabs - Desktop only */}
-            <div className="hidden lg:block mb-8" dir="rtl">
-              <Tabs
-                value={category || 'all'}
-                onValueChange={(val) => setCategory(val === 'all' ? '' : val)}
-                className="w-fit"
-              >
-                <TabsList className="bg-white/10 border border-white/20 p-1 rounded-full">
-                  <TabsTrigger
-                    value="all"
-                    highlightClassName="bg-white shadow-md"
-                    className="data-[state=active]:text-black text-white/80 hover:text-white"
-                  >
-                    הכל
-                  </TabsTrigger>
-                  {Object.entries(CATEGORY_MAP).slice(0, 5).map(([slug, name]) => (
+            {/* Category Tabs - Desktop only (top-level categories) */}
+            {categories.length > 0 && (
+              <div className="hidden lg:block mb-4" dir="rtl">
+                <Tabs
+                  value={activeTopLevelId || 'all'}
+                  onValueChange={(val) => setCategory(val === 'all' ? '' : val)}
+                  className="w-fit max-w-full overflow-x-auto"
+                >
+                  <TabsList className="bg-white/10 border border-white/20 p-1 rounded-full">
                     <TabsTrigger
-                      key={slug}
-                      value={slug}
+                      value="all"
                       highlightClassName="bg-white shadow-md"
                       className="data-[state=active]:text-black text-white/80 hover:text-white"
                     >
-                      {name}
+                      הכל
                     </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            </div>
+                    {categories.map((node) => (
+                      <TabsTrigger
+                        key={node.id}
+                        value={node.id}
+                        highlightClassName="bg-white shadow-md"
+                        className="data-[state=active]:text-black text-white/80 hover:text-white"
+                      >
+                        {node.name}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+              </div>
+            )}
+
+            {/* Subcategory pills - shown when the active top-level has children */}
+            {subcategories.length > 0 && activeTopLevelNode && (
+              <div className="mb-6 flex flex-wrap items-center gap-2" dir="rtl">
+                <button
+                  onClick={() => setCategory(activeTopLevelNode.id)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-full border text-sm transition-colors',
+                    category === activeTopLevelNode.id
+                      ? 'bg-gold-500/15 border-gold-500/40 text-white'
+                      : 'bg-white/5 border-white/15 text-white/70 hover:text-white hover:bg-white/10'
+                  )}
+                >
+                  כל {activeTopLevelNode.name}
+                </button>
+                {subcategories.map((child) => (
+                  <button
+                    key={child.id}
+                    onClick={() => setCategory(child.id)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-full border text-sm transition-colors',
+                      category === child.id
+                        ? 'bg-gold-500/15 border-gold-500/40 text-white'
+                        : 'bg-white/5 border-white/15 text-white/70 hover:text-white hover:bg-white/10'
+                    )}
+                  >
+                    {child.name}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Filters Row */}
             <div className="flex flex-wrap items-center gap-4">
-              <Select value={category || 'all'} onValueChange={(val) => {
-                setCategory(val === 'all' ? '' : val);
-              }}>
-                <SelectTrigger className="w-32 rounded-full bg-white/10 border-white/20 text-white">
-                  <SelectValue placeholder="קטגוריה" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">כל הקטגוריות</SelectItem>
-                  {Object.entries(CATEGORY_MAP).map(([slug, name]) => (
-                    <SelectItem key={slug} value={slug}>{name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {categories.length > 0 && (
+                <Select value={category || 'all'} onValueChange={(val) => {
+                  setCategory(val === 'all' ? '' : val);
+                }}>
+                  <SelectTrigger className="w-32 rounded-full bg-white/10 border-white/20 text-white">
+                    <SelectValue placeholder="קטגוריה" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">כל הקטגוריות</SelectItem>
+                    {categories.flatMap((node) => [
+                      <SelectItem key={node.id} value={node.id}>{node.name}</SelectItem>,
+                      ...(node.children ?? []).map((child) => (
+                        <SelectItem key={child.id} value={child.id}>
+                          {'  '}{child.name}
+                        </SelectItem>
+                      )),
+                    ])}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {/* Custom-field facet filters from Brainerce */}
+              {facets.map((facet) => (
+                <MetafieldFilter
+                  key={facet.key}
+                  label={facet.name}
+                  values={facet.values}
+                  selected={metafieldFilters[facet.key] || []}
+                  onChange={(next) =>
+                    setMetafieldFilters((prev) => ({ ...prev, [facet.key]: next }))
+                  }
+                />
+              ))}
 
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-32 rounded-full bg-white/10 border-white/20 text-white">
@@ -310,7 +467,7 @@ function ProductsContentInner() {
 
         {/* Active filters indicator */}
         <AnimatePresence>
-          {(search || category) && (
+          {(search || category || activeFacetKeys.length > 0) && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -319,13 +476,13 @@ function ProductsContentInner() {
             >
               <span className="text-sm text-white/60">מסננים:</span>
 
-              {category && CATEGORY_MAP[category] && (
+              {category && categoryName && (
                 <button
                   onClick={() => setCategory('')}
                   className="inline-flex items-center gap-2 px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 rounded-full text-sm font-medium text-white hover:bg-gold-500/20 transition-colors"
                 >
                   <Diamond className="h-3 w-3 text-gold-500" />
-                  {CATEGORY_MAP[category]}
+                  {categoryName}
                   <X className="h-3 w-3" />
                 </button>
               )}
@@ -342,6 +499,20 @@ function ProductsContentInner() {
                   </button>
                 </span>
               )}
+
+              {activeFacetKeys.flatMap((key) =>
+                metafieldFilters[key].map((value) => (
+                  <button
+                    key={`${key}-${value}`}
+                    onClick={() => removeMetafieldValue(key, value)}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 rounded-full text-sm font-medium text-white hover:bg-gold-500/20 transition-colors"
+                  >
+                    <Diamond className="h-3 w-3 text-gold-500" />
+                    {value}
+                    <X className="h-3 w-3" />
+                  </button>
+                ))
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -356,8 +527,8 @@ function ProductsContentInner() {
             <Diamond className="h-4 w-4 text-gold-500" />
             <p className="text-sm text-white/60">
               מציג <span className="font-semibold text-white">{sortedProducts.length}</span> מוצרים
-              {category && CATEGORY_MAP[category] && (
-                <span> בקטגוריית {CATEGORY_MAP[category]}</span>
+              {category && categoryName && (
+                <span> בקטגוריית {categoryName}</span>
               )}
             </p>
           </motion.div>
@@ -459,7 +630,7 @@ function ProductsContentInner() {
               </motion.div>
             ) : (
               <motion.div
-                key={`products-${category}-${sortBy}`}
+                key={`products-${category}-${sortBy}-${activeFacetKeys.map((k) => `${k}:${metafieldFilters[k].join('|')}`).join(',')}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}

@@ -33,13 +33,14 @@ import {
   type PickupLocation,
   type ShippingDestinations,
   type ProductMetafield,
+  type CategoryNode,
 } from 'brainerce';
 
-const SALES_CHANNEL_ID =
+export const SALES_CHANNEL_ID =
   process.env.NEXT_PUBLIC_BRAINERCE_SALES_CHANNEL_ID ||
   process.env.NEXT_PUBLIC_BRAINERCE_CONNECTION_ID ||
   'vc_LtawnwQr1w5F5Tqi1wYOG';
-const API_URL = process.env.NEXT_PUBLIC_BRAINERCE_API_URL || 'https://api.brainerce.com';
+export const API_URL = process.env.NEXT_PUBLIC_BRAINERCE_API_URL || 'https://api.brainerce.com';
 
 // Singleton SDK client
 let clientInstance: BrainerceClient | null = null;
@@ -177,6 +178,7 @@ export type {
   PickupLocation,
   ShippingDestinations,
   ProductMetafield,
+  CategoryNode,
 };
 
 // ============================================
@@ -494,6 +496,100 @@ export async function submitContactInquiry(
   } catch (error) {
     const message = error instanceof Error ? error.message : 'שגיאה בשליחת ההודעה';
     return { success: false, error: message };
+  }
+}
+
+// ============================================
+// Customization field labels
+// ============================================
+
+// Cache of productId -> (field key -> field display name). The buyer's chosen
+// values are stored on cart line items keyed by the field's opaque key
+// (e.g. "custom_field_123"); this resolves those keys to human names for display.
+const customizationLabelCache = new Map<string, Record<string, string>>();
+
+/**
+ * Resolve a product's customization field keys to their display names.
+ * Cached per product. Returns an empty map on any error.
+ */
+export async function getCustomizationLabels(productId: string): Promise<Record<string, string>> {
+  const cached = customizationLabelCache.get(productId);
+  if (cached) return cached;
+  try {
+    const product = await getClient().getProduct(productId);
+    const map: Record<string, string> = {};
+    for (const f of product.customizationFields ?? []) {
+      map[f.key] = f.name;
+    }
+    customizationLabelCache.set(productId, map);
+    return map;
+  } catch {
+    return {};
+  }
+}
+
+// ============================================
+// Category tree
+// ============================================
+
+let categoryTreeCache: CategoryNode[] | null = null;
+
+/**
+ * Fetch the store's category tree (top-level nodes, each with nested
+ * `children`). Cached after the first load. Returns [] on any error or when
+ * the store has no categories defined yet.
+ */
+export async function getCategoryTree(): Promise<CategoryNode[]> {
+  if (categoryTreeCache) return categoryTreeCache;
+  try {
+    const { categories } = await getClient().getCategories();
+    categoryTreeCache = categories ?? [];
+    return categoryTreeCache;
+  } catch {
+    return [];
+  }
+}
+
+// ============================================
+// Filterable metafield definitions (facets)
+// ============================================
+
+/** A storefront facet derived from a filterable metafield definition. */
+export interface FacetDefinition {
+  key: string;
+  name: string;
+  type: string;
+  values: string[];
+}
+
+let facetCache: FacetDefinition[] | null = null;
+
+/**
+ * Fetch the storefront-filterable metafield definitions ("facets") for the
+ * catalog. Only definitions flagged `filterable` in Brainerce with a non-empty
+ * enum value list are returned, sorted by their configured position. Cached
+ * after the first load. Returns [] on any error.
+ *
+ * Pair with the per-product `metafields` array (each entry exposes
+ * `definitionKey` + `value`) to filter products against the selected facets.
+ */
+export async function getFilterableMetafieldDefinitions(): Promise<FacetDefinition[]> {
+  if (facetCache) return facetCache;
+  try {
+    const { definitions } = await getClient().getPublicMetafieldDefinitions();
+    const facets = definitions
+      .filter((d) => d.filterable && Array.isArray(d.enumValues) && d.enumValues.length > 0)
+      .sort((a, b) => a.position - b.position)
+      .map((d) => ({
+        key: d.key,
+        name: d.name,
+        type: d.type,
+        values: d.enumValues as string[],
+      }));
+    facetCache = facets;
+    return facets;
+  } catch {
+    return [];
   }
 }
 

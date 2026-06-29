@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/providers/store-provider';
 import { getClient } from '@/lib/omni-sync';
-import { formatPrice, logError, getErrorMessage } from '@/lib/utils';
+import { formatPrice, logError, getErrorMessage, getCustomizationEntries, swatchColor } from '@/lib/utils';
+import { useCustomizationLabels } from '@/lib/use-customization-labels';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -46,6 +47,13 @@ export default function CartPage() {
   const subtotal = cart?.subtotal ? parseFloat(cart.subtotal) : 0;
   const discountAmount = cart?.discountAmount ? parseFloat(cart.discountAmount) : 0;
   const appliedCoupon = cart?.couponCode || null;
+
+  // Resolve customization field keys (e.g. "custom_field_123") to display names
+  const customizationLabels = useCustomizationLabels(
+    items
+      .filter((i) => i.metadata && Object.keys(i.metadata).length > 0)
+      .map((i) => i.productId)
+  );
 
   // Update quantity handler - uses productId/variantId like test_store
   async function updateQuantity(productId: string, variantId: string | undefined, quantity: number) {
@@ -323,6 +331,22 @@ export default function CartPage() {
                           {item.variant.name}
                         </p>
                       )}
+                      {/* Buyer-chosen options (color, size, …) */}
+                      {getCustomizationEntries(item.metadata, customizationLabels).map((c) => (
+                        <p
+                          key={c.key}
+                          className="text-sm text-muted-foreground mt-1 flex items-center gap-1"
+                        >
+                          {c.label && <span>{c.label}:</span>}
+                          {c.isColor && (
+                            <span
+                              className="inline-block h-3 w-3 rounded-full border border-black/15"
+                              style={{ background: swatchColor(c.value) }}
+                            />
+                          )}
+                          <span className="text-foreground/80 font-medium">{c.value}</span>
+                        </p>
+                      ))}
 
                       {/* Price with discount */}
                       <div className="mt-2">

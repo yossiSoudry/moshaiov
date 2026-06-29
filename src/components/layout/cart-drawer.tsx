@@ -9,7 +9,8 @@ import { useCartStore } from '@/store/cart-store';
 import { useCart } from '@/providers/store-provider';
 import { getClient } from '@/lib/omni-sync';
 import { Button } from '@/components/ui/button';
-import { formatPrice, logError } from '@/lib/utils';
+import { formatPrice, logError, getCustomizationEntries, swatchColor } from '@/lib/utils';
+import { useCustomizationLabels } from '@/lib/use-customization-labels';
 
 export function CartDrawer() {
   const { cart, refreshCart } = useCart();
@@ -55,6 +56,13 @@ export function CartDrawer() {
   const discountAmount = cart?.discountAmount ? parseFloat(cart.discountAmount) : 0;
   const couponCode = cart?.couponCode || null;
   const total = subtotal - discountAmount;
+
+  // Resolve customization field keys (e.g. "custom_field_123") to display names
+  const customizationLabels = useCustomizationLabels(
+    items
+      .filter((i) => i.metadata && Object.keys(i.metadata).length > 0)
+      .map((i) => i.productId)
+  );
 
   // RTL: drawer comes from the left side (visual right in RTL)
   const drawerVariants = {
@@ -219,6 +227,22 @@ export function CartDrawer() {
                                   {item.variant.name}
                                 </p>
                               )}
+                              {/* Buyer-chosen options (color, size, …) */}
+                              {getCustomizationEntries(item.metadata, customizationLabels).map((c) => (
+                                <p
+                                  key={c.key}
+                                  className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1"
+                                >
+                                  {c.label && <span>{c.label}:</span>}
+                                  {c.isColor && (
+                                    <span
+                                      className="inline-block h-3 w-3 rounded-full border border-black/15"
+                                      style={{ background: swatchColor(c.value) }}
+                                    />
+                                  )}
+                                  <span className="font-medium text-foreground/80">{c.value}</span>
+                                </p>
+                              ))}
                             </div>
 
                             <div className="flex items-center justify-between mt-2">

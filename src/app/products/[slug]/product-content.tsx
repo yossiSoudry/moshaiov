@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import DOMPurify from 'isomorphic-dompurify';
 import {
   Heart,
   ShoppingBag,
@@ -12,16 +13,22 @@ import {
   Minus,
   Plus,
 } from 'lucide-react';
-import { Shield } from 'lucide-react';
-import { omni, getClient } from '@/lib/omni-sync';
-import { cn, formatPrice, logError, getErrorMessage } from '@/lib/utils';
+import { omni } from '@/lib/omni-sync';
+import { cn, formatPrice, logError, getErrorMessage, swatchColor } from '@/lib/utils';
 import { useCart } from '@/providers/store-provider';
 import { useCartStore } from '@/store/cart-store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import type { Product, ProductVariant } from 'brainerce';
+import { Input } from '@/components/ui/input';
+import { getProductCustomizationFields, getVariantOptions } from 'brainerce';
+import type { Product, ProductVariant, ProductCustomizationField } from 'brainerce';
+
+// Heuristic: is this SELECT field a color picker? (by field name or key)
+function isColorField(f: ProductCustomizationField): boolean {
+  return /צבע|colou?r/i.test(f.name) || /colou?r|tzeva/i.test(f.key);
+}
 
 // Metafield type for display
 interface MetafieldDisplay {
@@ -67,10 +74,32 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
   );
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
+  // Buyer-entered customization fields (e.g. color, size) keyed by field.key
+  const [customValues, setCustomValues] = useState<Record<string, string | string[] | boolean>>({});
+  const [customError, setCustomError] = useState<string | null>(null);
 
   const { refreshCart } = useCart();
   const { openCart, addToCart: storeAddToCart, isLoading: cartLoading } = useCartStore();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+
+  // Merchant-defined customer input fields assigned to this product
+  const customizationFields: ProductCustomizationField[] = product
+    ? getProductCustomizationFields(product)
+    : [];
+
+  // The field's configured default, used until the buyer changes it
+  const defaultFor = (f: ProductCustomizationField): string | string[] | boolean | undefined => {
+    if (f.type === 'MULTI_SELECT') return f.defaultValue ? [f.defaultValue] : [];
+    if (f.type === 'BOOLEAN') return f.defaultValue === 'true';
+    return f.defaultValue != null && f.defaultValue !== '' ? f.defaultValue : undefined;
+  };
+
+  // Effective value: buyer selection if present, otherwise the configured default
+  const getFieldValue = (f: ProductCustomizationField): string | string[] | boolean | undefined =>
+    f.key in customValues ? customValues[f.key] : defaultFor(f);
+
+  const setFieldValue = (key: string, value: string | string[] | boolean) =>
+    setCustomValues((prev) => ({ ...prev, [key]: value }));
 
   useEffect(() => {
     async function fetchProduct() {
@@ -101,6 +130,35 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
 
   const handleAddToCart = async () => {
     if (!product || isAddingToCart || cartLoading) return;
+
+    // Validate buyer-entered customization fields and build metadata payload
+    const fields = getProductCustomizationFields(product);
+    const metadata: Record<string, unknown> = {};
+    for (const f of fields) {
+      const raw = getFieldValue(f);
+      const isEmpty =
+        raw === undefined || raw === '' || (Array.isArray(raw) && raw.length === 0);
+      if (f.required && isEmpty) {
+        setCustomError(`יש לבחור/למלא: ${f.name}`);
+        return;
+      }
+      if (isEmpty) continue;
+      if (typeof raw === 'string') {
+        if (f.minLength != null && raw.length < f.minLength) {
+          setCustomError(`${f.name}: יש להזין לפחות ${f.minLength} תווים`);
+          return;
+        }
+        if (f.maxLength != null && raw.length > f.maxLength) {
+          setCustomError(`${f.name}: ניתן להזין עד ${f.maxLength} תווים`);
+          return;
+        }
+        metadata[f.key] = f.type === 'NUMBER' ? Number(raw) : raw;
+      } else {
+        metadata[f.key] = raw;
+      }
+    }
+    setCustomError(null);
+
     try {
       setIsAddingToCart(true);
       setError(null);
@@ -120,11 +178,17 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
 
       // Use the unified cart store - handles both server and local carts
       // Pass product info for local cart display
-      await storeAddToCart(product.id, selectedVariant?.id, quantity, {
-        name: product.name,
-        price: price.toString(),
-        image,
-      });
+      await storeAddToCart(
+        product.id,
+        selectedVariant?.id,
+        quantity,
+        {
+          name: product.name,
+          price: price.toString(),
+          image,
+        },
+        metadata
+      );
 
       // Also refresh the context cart for server carts
       await refreshCart();
@@ -205,6 +269,254 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
 
   const stockInfo = getStockDisplay();
 
+  // Label for the variant selector — derived from the variant's attribute name
+  // (e.g. "גודל אבן"), falling back to a generic label.
+  const variantHeading =
+    (product?.variants?.length
+      ? getVariantOptions(product.variants[0])[0]?.name
+      : undefined) || 'בחר אפשרות';
+
+  // Render a single buyer-facing customization field by its type
+  const renderCustomField = (field: ProductCustomizationField) => {
+    const value = getFieldValue(field);
+    const buttonClass = (active: boolean) =>
+      cn(
+        'px-4 py-2 rounded-lg border text-sm font-medium transition-all',
+        active ? 'border-primary bg-primary text-primary-foreground' : 'border-border hover:border-primary'
+      );
+
+    switch (field.type) {
+      case 'SELECT':
+        // Color fields render as color circles with a hover tooltip
+        if (isColorField(field)) {
+          return (
+            <div>
+              <div className="flex flex-wrap gap-3">
+                {(field.enumValues ?? []).map((opt) => {
+                  const active = value === opt;
+                  return (
+                    <div key={opt} className="group relative flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => setFieldValue(field.key, opt)}
+                        aria-label={opt}
+                        aria-pressed={active}
+                        className={cn(
+                          'h-9 w-9 rounded-full border border-black/15 shadow-sm transition-transform',
+                          active
+                            ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                            : 'hover:scale-110'
+                        )}
+                        style={{ background: swatchColor(opt) }}
+                      />
+                      <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                        {opt}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {typeof value === 'string' && value && (
+                <p className="mt-2 text-sm text-muted-foreground">נבחר: {value}</p>
+              )}
+            </div>
+          );
+        }
+        return (
+          <div className="flex flex-wrap gap-2">
+            {(field.enumValues ?? []).map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => setFieldValue(field.key, opt)}
+                className={buttonClass(value === opt)}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        );
+
+      case 'MULTI_SELECT': {
+        const selected = Array.isArray(value) ? value : [];
+        return (
+          <div className="flex flex-wrap gap-2">
+            {(field.enumValues ?? []).map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() =>
+                  setFieldValue(
+                    field.key,
+                    selected.includes(opt)
+                      ? selected.filter((v) => v !== opt)
+                      : [...selected, opt]
+                  )
+                }
+                className={buttonClass(selected.includes(opt))}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        );
+      }
+
+      case 'BOOLEAN':
+        return (
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={value === true}
+              onChange={(e) => setFieldValue(field.key, e.target.checked)}
+              className="h-4 w-4 rounded border-input accent-primary"
+            />
+            <span className="text-sm text-muted-foreground">{field.description || field.name}</span>
+          </label>
+        );
+
+      case 'TEXTAREA':
+        return (
+          <textarea
+            value={typeof value === 'string' ? value : ''}
+            onChange={(e) => setFieldValue(field.key, e.target.value)}
+            maxLength={field.maxLength ?? undefined}
+            rows={3}
+            placeholder={field.description || ''}
+            className="flex w-full rounded-xl! border border-input bg-background px-3 py-2 text-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus:shadow-[0_0_0_2px_rgba(184,148,46,0.5)]"
+          />
+        );
+
+      case 'NUMBER':
+        return (
+          <Input
+            type="number"
+            value={typeof value === 'string' ? value : ''}
+            min={field.minValue ?? undefined}
+            max={field.maxValue ?? undefined}
+            onChange={(e) => setFieldValue(field.key, e.target.value)}
+          />
+        );
+
+      case 'COLOR':
+        return (
+          <Input
+            type="color"
+            value={typeof value === 'string' && value ? value : '#000000'}
+            onChange={(e) => setFieldValue(field.key, e.target.value)}
+            className="h-10 w-16 p-1"
+          />
+        );
+
+      case 'DATE':
+      case 'DATETIME':
+        return (
+          <Input
+            type={field.type === 'DATE' ? 'date' : 'datetime-local'}
+            value={typeof value === 'string' ? value : ''}
+            onChange={(e) => setFieldValue(field.key, e.target.value)}
+          />
+        );
+
+      // IMAGE / GALLERY require a file upload flow — not used for color/size here.
+      case 'IMAGE':
+      case 'GALLERY':
+        return null;
+
+      // TEXT, URL, DIMENSION, WEIGHT, JSON, etc.
+      default:
+        return (
+          <Input
+            type="text"
+            value={typeof value === 'string' ? value : ''}
+            maxLength={field.maxLength ?? undefined}
+            placeholder={field.description || ''}
+            onChange={(e) => setFieldValue(field.key, e.target.value)}
+          />
+        );
+    }
+  };
+
+  // Metafields with a non-empty value, used for the technical specification table
+  const specFields: MetafieldDisplay[] = product
+    ? (product.metafields as unknown as MetafieldDisplay[] | undefined)?.filter(
+        (mf) => mf.value !== null && mf.value !== undefined && mf.value !== ''
+      ) ?? []
+    : [];
+
+  // Render a single metafield value for the specification table by its type
+  const renderSpecValue = (mf: MetafieldDisplay, fieldName: string) => {
+    if (mf.type === 'IMAGE' && typeof mf.value === 'string' && mf.value.trim() !== '') {
+      return (
+        <Image
+          src={mf.value}
+          alt={fieldName}
+          width={80}
+          height={80}
+          className="rounded-md object-cover"
+          unoptimized
+        />
+      );
+    }
+    if (mf.type === 'BOOLEAN') {
+      return mf.value ? 'כן' : 'לא';
+    }
+    if (mf.type === 'URL' && typeof mf.value === 'string' && mf.value.trim() !== '') {
+      return (
+        <a
+          href={mf.value}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          לחץ כאן
+        </a>
+      );
+    }
+    return String(mf.value);
+  };
+
+  // Technical specification table (custom fields). Rendered in the images column
+  // on desktop and at the very bottom on mobile, so call it from both spots.
+  const renderSpecTable = () => {
+    if (specFields.length === 0) return null;
+    return (
+      <div className="rounded-xl border border-border overflow-hidden">
+        <div className="bg-neutral-950 px-4 py-3">
+          <h2 className="text-sm font-semibold text-gold-400 text-right">
+            מידע נוסף אודות {product?.name}
+          </h2>
+        </div>
+        <table className="w-full text-sm">
+          <tbody>
+            {specFields.map((mf, index) => {
+              const fieldName =
+                mf.definitionName ||
+                (mf as unknown as { name?: string }).name ||
+                'פרט';
+              return (
+                <tr
+                  key={mf.id || `spec-${index}`}
+                  className="border-t border-border first:border-t-0"
+                >
+                  <th
+                    scope="row"
+                    className="w-2/5 bg-muted/60 px-4 py-3 text-right font-medium text-foreground align-top"
+                  >
+                    {fieldName}
+                  </th>
+                  <td className="px-4 py-3 text-right text-muted-foreground align-top whitespace-pre-line">
+                    {renderSpecValue(mf, fieldName)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -267,9 +579,17 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
           <div className="space-y-4">
             {/* Main image */}
             <motion.div
-              className="relative aspect-square bg-muted rounded-xl overflow-hidden"
+              className="relative aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-gold-50 via-white to-gold-100 ring-1 ring-gold-200/60 shadow-sm"
               layoutId={`product-image-${product.id}`}
             >
+              {/* Soft gold radial glow behind the product */}
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    'radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--gold-300) 30%, transparent), transparent 70%)',
+                }}
+              />
               {displayImage ? (
                 <Image
                   src={displayImage}
@@ -332,6 +652,9 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
                 ))}
               </div>
             )}
+
+            {/* Spec table — desktop: under the images. Mobile copy is rendered last. */}
+            <div className="mt-6 hidden lg:block">{renderSpecTable()}</div>
           </div>
 
           {/* Product Info */}
@@ -343,12 +666,12 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
             >
               {/* Category */}
               {(() => {
-                const categories = product.categories as unknown as { slug?: string; name?: string }[] | undefined;
+                const categories = product.categories as unknown as { id?: string; name?: string }[] | undefined;
                 const firstCategory = categories?.[0];
                 if (!firstCategory) return null;
                 return (
                   <Link
-                    href={`/products?category=${firstCategory.slug || ''}`}
+                    href={`/products?category=${encodeURIComponent(firstCategory.id || firstCategory.name || '')}`}
                     className="text-sm text-muted-foreground hover:text-foreground mb-2 inline-block"
                   >
                     {firstCategory.name || 'קטגוריה'}
@@ -403,10 +726,35 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
                 </div>
               )}
 
-              {/* Variants */}
+              {/* Customer-chosen customization fields (e.g. color, size) */}
+              {customizationFields.length > 0 && (
+                <div className="mb-6 space-y-5">
+                  {customizationFields.map((field) => {
+                    const control = renderCustomField(field);
+                    if (!control) return null;
+                    return (
+                      <div key={field.definitionId}>
+                        <h3 className="font-medium mb-2">
+                          {field.name}
+                          {field.required && <span className="text-destructive ms-1">*</span>}
+                        </h3>
+                        {field.description && field.type !== 'BOOLEAN' && (
+                          <p className="text-sm text-muted-foreground mb-2">{field.description}</p>
+                        )}
+                        {control}
+                      </div>
+                    );
+                  })}
+                  {customError && (
+                    <p className="text-sm text-destructive">{customError}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Variants — price-bearing option (e.g. stone size) */}
               {product.variants && product.variants.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="font-medium mb-3">בחר אפשרות:</h3>
+                  <h3 className="font-medium mb-3">{variantHeading}:</h3>
                   <div className="flex flex-wrap gap-2">
                     {product.variants.map((variant) => {
                       const variantInv = variant.inventory;
@@ -502,90 +850,16 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
                   <h3 className="font-medium mb-3">תיאור המוצר</h3>
                   <div
                     className="text-muted-foreground leading-relaxed prose prose-sm prose-neutral dark:prose-invert max-w-none [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-2 [&>h2]:mt-4 [&>h2]:text-foreground [&>h3]:text-lg [&>h3]:font-bold [&>h3]:mb-2 [&>h3]:text-foreground [&>p]:mb-3 [&>ul]:list-disc [&>ul]:pr-6 [&>ul]:mb-3 [&>li]:mb-1 [&_strong]:font-bold [&_strong]:text-foreground"
-                    dangerouslySetInnerHTML={{ __html: product.description }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description) }}
                   />
                 </div>
               )}
 
-              {/* Features */}
-              <div className="flex flex-row flex-wrap items-start gap-4">
-                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                  <Shield className="h-5 w-5 text-muted-foreground" />
-                  <div className="text-sm">
-                    <p className="font-medium">אחריות מלאה</p>
-                    <p className="text-muted-foreground">על כל תכשיט</p>
-                  </div>
-                </div>
-                {/* Custom fields from server */}
-                {product.metafields && (product.metafields as unknown as MetafieldDisplay[]).map((mf, index) => {
-                  const fieldName = mf.definitionName || (mf as unknown as { name?: string }).name || 'פרט';
-
-                  // Skip empty values
-                  if (mf.value === null || mf.value === undefined || mf.value === '') {
-                    return null;
-                  }
-
-                  // Handle IMAGE type - show the image
-                  if (mf.type === 'IMAGE' && typeof mf.value === 'string' && mf.value.trim() !== '') {
-                    return (
-                      <div key={mf.id || `feature-${index}`} className="flex flex-col gap-2 p-3 bg-muted rounded-lg">
-                        <p className="text-sm font-medium">{fieldName}</p>
-                        <Image
-                          src={mf.value}
-                          alt={fieldName}
-                          width={80}
-                          height={80}
-                          className="rounded-md object-cover"
-                          unoptimized
-                        />
-                      </div>
-                    );
-                  }
-
-                  // Handle BOOLEAN type
-                  if (mf.type === 'BOOLEAN') {
-                    return (
-                      <div key={mf.id || `feature-${index}`} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                        <div className="text-sm">
-                          <p className="font-medium">{fieldName}</p>
-                          <p className="text-muted-foreground">{mf.value ? 'כן' : 'לא'}</p>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // Handle URL type - show as link
-                  if (mf.type === 'URL' && typeof mf.value === 'string' && mf.value.trim() !== '') {
-                    return (
-                      <div key={mf.id || `feature-${index}`} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                        <div className="text-sm">
-                          <p className="font-medium">{fieldName}</p>
-                          <a
-                            href={mf.value}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline"
-                          >
-                            לחץ כאן
-                          </a>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // Default: TEXT, NUMBER, DATE, RICH_TEXT, etc.
-                  return (
-                    <div key={mf.id || `feature-${index}`} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                      <div className="text-sm">
-                        <p className="font-medium">{fieldName}</p>
-                        <p className="text-muted-foreground">{String(mf.value)}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             </motion.div>
           </div>
+
+          {/* Spec table — mobile only, placed last so it sits at the very bottom */}
+          <div className="lg:hidden">{renderSpecTable()}</div>
         </div>
       </div>
     </div>
