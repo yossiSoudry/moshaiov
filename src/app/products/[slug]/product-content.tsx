@@ -12,9 +12,10 @@ import {
   ChevronRight,
   Minus,
   Plus,
+  Play,
 } from 'lucide-react';
 import { omni } from '@/lib/omni-sync';
-import { cn, formatPrice, logError, getErrorMessage, swatchColor } from '@/lib/utils';
+import { cn, formatPrice, logError, getErrorMessage, swatchColor, isVideoUrl } from '@/lib/utils';
 import { useCart } from '@/providers/store-provider';
 import { useCartStore } from '@/store/cart-store';
 import { Button } from '@/components/ui/button';
@@ -221,18 +222,23 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
     : undefined;
   const hasDiscount = compareAtPrice && compareAtPrice > currentPrice;
 
-  // Get display image - use variant image if available
-  const getDisplayImage = (): string => {
+  // Get the media currently shown in the main viewer - variant image overrides
+  // the selected gallery item. Returns the url plus mimeType (when known) so we
+  // can tell a video apart from a still image.
+  const getDisplayMedia = (): { url: string; mimeType?: string } => {
     // Check if variant has an image (might be on extended type)
     const variantWithImage = selectedVariant as { image?: string | { url: string; thumbnailUrl?: string } } | null;
     if (variantWithImage?.image) {
       const img = variantWithImage.image;
-      return typeof img === 'string' ? img : img.url;
+      return typeof img === 'string' ? { url: img } : { url: img.url };
     }
-    return product?.images?.[selectedImage]?.url || '';
+    const media = product?.images?.[selectedImage] as { url?: string; mimeType?: string } | undefined;
+    return { url: media?.url || '', mimeType: media?.mimeType };
   };
 
-  const displayImage = getDisplayImage();
+  const displayMedia = getDisplayMedia();
+  const displayImage = displayMedia.url;
+  const displayIsVideo = isVideoUrl(displayMedia.url, displayMedia.mimeType);
 
   // Get stock info - check variant inventory if variant is selected
   const getStockDisplay = () => {
@@ -590,7 +596,19 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
                     'radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--gold-300) 30%, transparent), transparent 70%)',
                 }}
               />
-              {displayImage ? (
+              {displayImage && displayIsVideo ? (
+                <video
+                  key={displayImage}
+                  src={displayImage}
+                  controls
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="auto"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : displayImage ? (
                 <Image
                   src={displayImage}
                   alt={product.name}
@@ -629,27 +647,56 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
             {/* Thumbnails */}
             {product.images && product.images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
-                {(product.images as { id?: string; url: string }[]).map((image, index) => (
-                  <button
-                    key={image.id || index}
-                    onClick={() => setSelectedImage(index)}
-                    className={cn(
-                      'relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-colors',
-                      selectedImage === index
-                        ? 'border-primary'
-                        : 'border-transparent hover:border-muted-foreground/30'
-                    )}
-                  >
-                    <Image
-                      src={image.url}
-                      alt={`${product.name} - תמונה ${index + 1}`}
-                      fill
-                      className="object-cover"
-                      sizes="80px"
-                      unoptimized
-                    />
-                  </button>
-                ))}
+                {(product.images as { id?: string; url: string; mimeType?: string; thumbnailUrl?: string }[]).map((image, index) => {
+                  const isVideo = isVideoUrl(image.url, image.mimeType);
+                  return (
+                    <button
+                      key={image.id || index}
+                      onClick={() => setSelectedImage(index)}
+                      className={cn(
+                        'relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-colors',
+                        selectedImage === index
+                          ? 'border-primary'
+                          : 'border-transparent hover:border-muted-foreground/30'
+                      )}
+                    >
+                      {isVideo ? (
+                        <>
+                          {image.thumbnailUrl ? (
+                            <Image
+                              src={image.thumbnailUrl}
+                              alt={`${product.name} - וידאו ${index + 1}`}
+                              fill
+                              className="object-cover"
+                              sizes="80px"
+                              unoptimized
+                            />
+                          ) : (
+                            <video
+                              src={image.url}
+                              muted
+                              playsInline
+                              preload="metadata"
+                              className="absolute inset-0 h-full w-full object-cover"
+                            />
+                          )}
+                          <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <Play className="h-6 w-6 fill-white text-white" />
+                          </span>
+                        </>
+                      ) : (
+                        <Image
+                          src={image.url}
+                          alt={`${product.name} - תמונה ${index + 1}`}
+                          fill
+                          className="object-cover"
+                          sizes="80px"
+                          unoptimized
+                        />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -849,8 +896,26 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
                 <div className="mb-6">
                   <h3 className="font-medium mb-3">תיאור המוצר</h3>
                   <div
-                    className="text-muted-foreground leading-relaxed prose prose-sm prose-neutral dark:prose-invert max-w-none [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-2 [&>h2]:mt-4 [&>h2]:text-foreground [&>h3]:text-lg [&>h3]:font-bold [&>h3]:mb-2 [&>h3]:text-foreground [&>p]:mb-3 [&>ul]:list-disc [&>ul]:pr-6 [&>ul]:mb-3 [&>li]:mb-1 [&_strong]:font-bold [&_strong]:text-foreground"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description) }}
+                    className="text-muted-foreground leading-relaxed prose prose-sm prose-neutral dark:prose-invert max-w-none [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-2 [&>h2]:mt-4 [&>h2]:text-foreground [&>h3]:text-lg [&>h3]:font-bold [&>h3]:mb-2 [&>h3]:text-foreground [&>p]:mb-3 [&>ul]:list-disc [&>ul]:pr-6 [&>ul]:mb-3 [&>li]:mb-1 [&_strong]:font-bold [&_strong]:text-foreground [&_iframe]:w-full [&_iframe]:aspect-video [&_iframe]:rounded-xl [&_iframe]:my-4 [&_iframe]:shadow-lg [&_iframe]:ring-1 [&_iframe]:ring-gold-200/60 [&_video]:w-full [&_video]:max-h-[70vh] [&_video]:aspect-video [&_video]:object-cover [&_video]:rounded-xl [&_video]:my-4 [&_video]:bg-neutral-950 [&_video]:shadow-lg [&_video]:ring-1 [&_video]:ring-gold-200/60"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(product.description, {
+                        // Allow embedded players (YouTube/Vimeo iframes and <video>)
+                        // that merchants add to the rich-text description.
+                        ADD_TAGS: ['iframe'],
+                        ADD_ATTR: [
+                          'allow',
+                          'allowfullscreen',
+                          'frameborder',
+                          'scrolling',
+                          'controls',
+                          'playsinline',
+                          'loop',
+                          'muted',
+                          'poster',
+                          'target',
+                        ],
+                      }),
+                    }}
                   />
                 </div>
               )}

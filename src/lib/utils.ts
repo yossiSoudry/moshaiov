@@ -19,6 +19,21 @@ export function formatPriceRange(min: number, max: number): string {
   return `${formatPrice(min)} - ${formatPrice(max)}`
 }
 
+// Media type detection
+// ============================================
+
+// Video file extensions we know how to play in a <video> element
+const VIDEO_EXT = /\.(mp4|webm|ogv|ogg|mov|m4v)(\?|#|$)/i
+
+// Is this media item a video? Detects by MIME type first (most reliable), then
+// falls back to the file extension in the URL. Used to decide between rendering
+// a <video> player and a next/image on the product gallery.
+export function isVideoUrl(url?: string | null, mimeType?: string | null): boolean {
+  if (mimeType && mimeType.startsWith('video/')) return true
+  if (!url) return false
+  return VIDEO_EXT.test(url)
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
