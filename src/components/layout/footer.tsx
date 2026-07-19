@@ -30,10 +30,10 @@ const TikTokIcon = ({ className }: { className?: string }) => (
 const footerLinks = {
   shop: [
     { href: '/products', label: 'כל המוצרים' },
-    { href: '/products?category=rings', label: 'טבעות' },
-    { href: '/products?category=necklaces', label: 'שרשראות' },
-    { href: '/products?category=earrings', label: 'עגילים' },
-    { href: '/products?category=bracelets', label: 'צמידים' },
+    { href: '/products?category=' + encodeURIComponent('טבעות'), label: 'טבעות' },
+    { href: '/products?category=' + encodeURIComponent('שרשראות'), label: 'שרשראות' },
+    { href: '/products?category=' + encodeURIComponent('עגילים'), label: 'עגילים' },
+    { href: '/products?category=' + encodeURIComponent('צמידים'), label: 'צמידים' },
   ],
   info: [
     { href: '/about', label: 'אודות' },

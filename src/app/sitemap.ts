@@ -12,14 +12,16 @@ const staticPages = [
   { path: '/terms', priority: 0.3, changeFrequency: 'yearly' as const },
 ];
 
-// Category pages
-const categories = ['rings', 'necklaces', 'earrings', 'bracelets', 'pendants', 'watches'];
+// Real top-level categories from the Brainerce catalog (matched by name against
+// the live category tree in products-content.tsx - keep in sync with the store).
+const categories = ['טבעות', 'שרשראות', 'עגילים', 'צמידים'];
 
 async function getProducts() {
   try {
     const response = await fetch(
       `https://api.brainerce.com/api/vc/vc_LtawnwQr1w5F5Tqi1wYOG/products?limit=500`,
       {
+        headers: { Origin: baseUrl },
         next: { revalidate: 3600 }, // Cache for 1 hour
       }
     );
@@ -47,7 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Category pages
   const categoryEntries: MetadataRoute.Sitemap = categories.map((category) => ({
-    url: `${baseUrl}/products?category=${category}`,
+    url: `${baseUrl}/products?category=${encodeURIComponent(category)}`,
     lastModified: new Date(),
     changeFrequency: 'daily' as const,
     priority: 0.8,

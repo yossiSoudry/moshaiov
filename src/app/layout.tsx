@@ -79,20 +79,11 @@ export const metadata: Metadata = {
     siteName: "מושיוב - תכשיטי זהב ויהלומים",
     title: "מושיוב | תכשיטי זהב ויהלומים יוקרתיים",
     description: "חנות תכשיטי זהב ויהלומים יוקרתיים בבני ברק. טבעות אירוסין, שרשראות, עגילים ועוד. משלוח חינם ואחריות מלאה.",
-    images: [
-      {
-        url: "/og-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "מושיוב - תכשיטי זהב ויהלומים",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "מושיוב | תכשיטי זהב ויהלומים",
     description: "חנות תכשיטי זהב ויהלומים יוקרתיים בבני ברק",
-    images: ["/og-image.jpg"],
   },
   robots: {
     index: true,
@@ -124,7 +115,7 @@ const organizationJsonLd = {
   alternateName: "Moshayov Jewelry",
   url: baseUrl,
   logo: `${baseUrl}/favicon.svg`,
-  image: `${baseUrl}/og-image.jpg`,
+  image: `${baseUrl}/moshayov-text-logo.png`,
   description: "חנות תכשיטי זהב ויהלומים יוקרתיים בבני ברק. טבעות אירוסין, שרשראות, עגילים, צמידים ותליונים.",
   address: {
     "@type": "PostalAddress",
@@ -155,7 +146,7 @@ const organizationJsonLd = {
     },
   ],
   sameAs: [
-    // Add social media URLs when available
+    "https://www.tiktok.com/@moshayov_jewelry",
   ],
 };
 

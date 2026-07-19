@@ -616,7 +616,6 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
                   className="object-cover"
                   sizes="(max-width: 1024px) 100vw, 50vw"
                   priority
-                  unoptimized
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -669,7 +668,6 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
                               fill
                               className="object-cover"
                               sizes="80px"
-                              unoptimized
                             />
                           ) : (
                             <video
@@ -691,7 +689,6 @@ export function ProductContent({ slug, initialProduct }: ProductContentProps) {
                           fill
                           className="object-cover"
                           sizes="80px"
-                          unoptimized
                         />
                       )}
                     </button>

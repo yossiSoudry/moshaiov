@@ -169,16 +169,17 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+      className="h-full"
     >
       <Link
         href={`/products/${product.slug}`}
         prefetch={false}
-        className="group block"
+        className="group block h-full"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
         <Card className={cn(
-          "overflow-hidden backdrop-blur-sm transition-all duration-500 hover:shadow-xl hover:shadow-gold-500/5 p-0 gap-0",
+          "h-full flex flex-col overflow-hidden backdrop-blur-sm transition-all duration-500 hover:shadow-xl hover:shadow-gold-500/5 p-0 gap-0",
           isLight
             ? "border-neutral-200 bg-white hover:border-gold-500/40"
             : "border-white/10 bg-neutral-900/80 hover:border-gold-500/30"
@@ -309,7 +310,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
           </div>
 
           {/* Product Info */}
-          <CardContent className="p-3 sm:p-5 space-y-2 sm:space-y-3">
+          <CardContent className="p-3 sm:p-5 flex flex-col flex-1 gap-2 sm:gap-3">
             <h3 className={cn(
               "font-semibold text-sm sm:text-lg leading-tight line-clamp-2 transition-colors duration-300",
               isLight
@@ -349,7 +350,7 @@ export function ProductCard({ product, index = 0, variant = 'dark' }: ProductCar
             </div>
 
             {/* Price and Add to Cart */}
-            <div className="flex items-center justify-between pt-1 sm:pt-2 gap-2">
+            <div className="flex items-center justify-between pt-1 sm:pt-2 gap-2 mt-auto">
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <span className={cn(

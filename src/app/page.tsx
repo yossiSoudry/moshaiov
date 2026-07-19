@@ -1,10 +1,28 @@
 import { Suspense } from 'react';
+import Script from 'next/script';
 import { HeroSection } from '@/components/home/hero-section';
 import { FeaturedProducts } from '@/components/home/featured-products';
 import { CategoriesSection } from '@/components/home/categories-section';
 import { AboutPreview } from '@/components/home/about-preview';
+import { FaqSection } from '@/components/home/faq-section';
+import { faqs } from '@/lib/faq-data';
 import { ContactCTA } from '@/components/home/contact-cta';
 import { Diamond, Sparkles } from 'lucide-react';
+
+// FAQPage JSON-LD, generated from the same content shown in FaqSection so the
+// structured data always matches what's visible on the page.
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: faq.answer,
+    },
+  })),
+};
 
 function ProductsSkeleton() {
   return (
@@ -25,6 +43,11 @@ function ProductsSkeleton() {
 export default function HomePage() {
   return (
     <main className="overflow-hidden">
+      <Script
+        id="faq-jsonld"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       {/* Hero Section */}
       <HeroSection />
 
@@ -78,6 +101,9 @@ export default function HomePage() {
 
       {/* About Preview */}
       <AboutPreview />
+
+      {/* FAQ Section */}
+      <FaqSection />
 
       {/* Contact CTA */}
       <ContactCTA />
